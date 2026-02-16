@@ -973,7 +973,9 @@ let budget = {
         'Svago': ['ristorante', 'pizza', 'cena', 'pranzo', 'cinema', 'teatro', 'concerto', 'disco', 'bar', 'pub', 'vacanza', 'viaggio', 'hotel', 'divertimento'],
         'Salute': ['farmacia', 'farmaco', 'medico', 'dottore', 'ospedale', 'analisi', 'visita', 'specialista', 'dentista', 'oculista', 'medicina'],
         'Shopping': ['vestiti', 'abbigliamento', 'scarpe', 'tecnologia', 'elettronica', 'arredamento', 'mobile', 'casa', 'giocattolo', 'regalo'],
-        'Affitto': ['affitto', 'mutuo', 'rata', 'condominio', 'casa', 'appartamento', 'locazione']
+        'Affitto': ['affitto', 'mutuo', 'rata', 'condominio', 'casa', 'appartamento', 'locazione', 'credito', 'prestito', 'finanziamento'],
+        'Mutuo': ['mutuo', 'credit', 'credito', 'prestito', 'ipoteca', 'rata mutuo', 'banca', 'rata', 'finanziamento']
+
     };
 
     // Dizionario per imparare dalle correzioni utente
@@ -2794,6 +2796,11 @@ if (suggestions[0].confidence < 95) {
         });
         
         document.getElementById(`screen-${screenName}`).classList.add('active');
+
+        // 🔴 AGGIUNGI QUESTE RIGHE
+    if (screenName === 'add-income' || screenName === 'add-expense') {
+        setTimeout(fixAmountLabel, 100);  // Piccolo ritardo per sicurezza
+    }
         
         if (screenName === 'dashboard') {
             updateDashboard();
@@ -3223,47 +3230,80 @@ if (shoppingCountEl) {
 
     // ==================== BUDGET FUNCTIONS ====================
     function renderBudget() {
-        const container = document.getElementById('budget-items');
-        container.innerHTML = '';
+    const container = document.getElementById('budget-items');
+    container.innerHTML = '';
+    
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);  // Ottieni le traduzioni
+    const currencySymbol = userProfile?.currencySymbol || 'lei';  // Per romeno
+    
+    const expensesByCategory = {};
+    transactions
+        .filter(t => t.type === 'uscita')
+        .forEach(t => {
+            expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + t.amount;
+        });
+    
+    Object.entries(budget).forEach(([category, budgetAmount]) => {
+        const spent = expensesByCategory[category] || 0;
+        const percentage = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
         
-        const expensesByCategory = {};
-        transactions
-            .filter(t => t.type === 'uscita')
-            .forEach(t => {
-                expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + t.amount;
-            });
+        // 🔥 TRADUCI IL NOME DELLA CATEGORIA
+        let categoryName = category;
         
-        Object.entries(budget).forEach(([category, budgetAmount]) => {
-            const spent = expensesByCategory[category] || 0;
-            const percentage = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
-            
-            const budgetHTML = `
-                <div class="space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium">${category}</span>
-                        <div class="flex items-center gap-3">
-                            <span class="text-sm text-gray-500">€</span>
-                            <input type="number" value="${budgetAmount}" 
-                                   onchange="updateBudget('${category}', this.value)"
-                                   class="w-24 p-2 border rounded text-right">
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between text-sm text-gray-500">
-                        <span>Speso: ${formatCurrency(spent)}</span>
-                        <span>${percentage.toFixed(1)}%</span>
-                    </div>
-                    
-                    <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div class="h-full ${percentage > 100 ? 'bg-red-500' : 'bg-green-500'} progress-bar"
-                             style="width: ${Math.min(percentage, 100)}%">
-                        </div>
+        // Mappa le categorie italiane alle chiavi di traduzione
+        const categoryMap = {
+            'Alimentari': 'food',
+            'Affitto': 'rent',
+            'Mutuo': 'mortgage',
+            'Bollette': 'utilities',
+            'Trasporti': 'transport',
+            'Svago': 'entertainment',
+            'Salute': 'health',
+            'Shopping': 'shopping-cat',
+            'Cibo': 'food',
+            'Abitazione': 'housing',
+            'Intrattenimento': 'entertainment',
+            'Altro': 'other'
+        };
+        
+        // Se la categoria è nella mappa, usa la traduzione
+        const translationKey = categoryMap[category];
+        if (translationKey && t[translationKey]) {
+            categoryName = t[translationKey];
+        }
+        // Altrimenti, prova a usare la categoria direttamente come chiave
+        else if (t[category.toLowerCase()]) {
+            categoryName = t[category.toLowerCase()];
+        }
+        
+        const budgetHTML = `
+            <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="font-medium">${categoryName}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm text-gray-500">${currencySymbol}</span>
+                        <input type="number" value="${budgetAmount}" 
+                               onchange="updateBudget('${category}', this.value)"
+                               class="w-24 p-2 border rounded text-right">
                     </div>
                 </div>
-            `;
-            container.innerHTML += budgetHTML;
-        });
-    }
+                
+                <div class="flex justify-between text-sm text-gray-500">
+                    <span>${t['current-spending'] || 'Cheltuieli curente'}: ${formatCurrency(spent)}</span>
+                    <span>${percentage.toFixed(1)}%</span>
+                </div>
+                
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full ${percentage > 100 ? 'bg-red-500' : 'bg-green-500'} progress-bar"
+                         style="width: ${Math.min(percentage, 100)}%">
+                    </div>
+                </div>
+            </div>
+        `;
+        container.innerHTML += budgetHTML;
+    });
+}
 
     function updateBudget(category, value) {
         budget[category] = parseFloat(value) || 0;
@@ -3405,6 +3445,8 @@ function saveProfile() {
     // 🔴 QUESTA È LA RIGA FONDAMENTALE PER TRADURRE!
     applyLanguageSettings();
     updateCurrencyLabel();
+    fixAmountLabel();  // <-- AGGIUNGI QUESTA RIGA
+
     // 🔥 AGGIUNGI ANCHE QUESTE PER I MENU A TENDINA
     translateCategoryDropdowns();
     translateSelectPlaceholders();
@@ -5206,6 +5248,8 @@ if (shoppingCountEl) {
     translateSelectPlaceholders();  // <-- AGGIUNGI QUESTA RIGA
     // Alla fine di applyLanguageSettings(), PRIMA dell'ultima parentesi graffa
     fixBalanceTranslation();
+    renderBudget();  // <-- AGGIUNGI QUESTA RIGA
+    fixAmountLabel();  // <-- AGGIUNGI QUESTA RIGA
     console.log('✅ Lingua applicata e schermate tradotte');
 }
 // ==================== TRADUZIONE MENU A TENDINA ====================
@@ -5683,6 +5727,7 @@ function getTranslations(lang) {
             'optional': 'Facoltativo',      // per IT
             'amount-with-currency': 'Importo (€)', // per IT
             'income-placeholder': 'Stipendio, Bonus, Vendita...', // per IT
+            'current-spending': 'Spesa attuale',        // per IT
             'other': 'Altro',
         },
         'en': {
@@ -5771,6 +5816,7 @@ function getTranslations(lang) {
             'optional': 'Optional',         // per EN
             'amount-with-currency': 'Amount (€)',  // per EN
             'income-placeholder': 'Salary, Bonus, Sale...',       // per EN
+            'current-spending': 'Current spending',     // per EN
             'other': 'Other',
         },
         'es': {
@@ -5861,6 +5907,7 @@ function getTranslations(lang) {
             'amount-with-currency': 'Importe (€)',
             'income-placeholder': 'Salario, Bono, Venta...',
             'expense-placeholder': 'Cena, Gasolina, Factura...',
+            'current-spending': 'Gasto actual',         // per ES
             'other': 'Otro',
         },
         'fr': {
@@ -5951,6 +5998,7 @@ function getTranslations(lang) {
             'amount-with-currency': 'Montant (€)',
             'income-placeholder': 'Salaire, Bonus, Vente...',
             'expense-placeholder': 'Dîner, Essence, Facture...',
+            'current-spending': 'Dépenses actuelles',   // per FR
             'other': 'Autre',
         },
         'de': {
@@ -6041,6 +6089,7 @@ function getTranslations(lang) {
             'amount-with-currency': 'Betrag (€)',
             'income-placeholder': 'Gehalt, Bonus, Verkauf...',
             'expense-placeholder': 'Abendessen, Benzin, Rechnung...',
+            'current-spending': 'Aktuelle Ausgaben',    // per DE
             'other': 'Sonstiges',
         },
         'ro': {
@@ -6131,6 +6180,7 @@ function getTranslations(lang) {
             'amount-with-currency': 'Sumă (€)',
             'income-placeholder': 'Salariu, Bonus, Vânzare...',
             'expense-placeholder': 'Cină, Benzină, Factură...',
+            'current-spending': 'Cheltuieli curente',   // per RO
             'other': 'Altele',
         }
     };
@@ -6176,6 +6226,38 @@ function fixBalanceTranslation() {
         }
         console.log('✅ Balance tradotto in:', lang, balanceElement.textContent);
     }
+}
+// ==================== FORZA TRADUZIONE LABEL IMPORTO ====================
+function fixAmountLabel() {
+    // Trova tutte le label con data-translate="amount-with-currency"
+    const amountLabels = document.querySelectorAll('[data-translate="amount-with-currency"]');
+    
+    if (amountLabels.length === 0) {
+        console.log('⚠️ Label importo non trovate, riprovo tra 300ms');
+        setTimeout(fixAmountLabel, 300);
+        return;
+    }
+    
+    const lang = userProfile?.language || 'it';
+    const currency = userProfile?.currency || 'EUR';
+    
+    // Traduzioni base per lingua
+    const translations = {
+        'it': 'Importo',
+        'en': 'Amount',
+        'es': 'Importe',
+        'fr': 'Montant',
+        'de': 'Betrag',
+        'ro': 'Sumă'
+    };
+    
+    const baseText = translations[lang] || translations['it'];
+    const fullText = `${baseText} (${currency}) *`;
+    
+    amountLabels.forEach(label => {
+        label.textContent = fullText;
+        console.log(`✅ Label importo aggiornata: ${fullText}`);
+    });
 }
 // ==================== TEST TRADUZIONE ====================
 function testTranslate() {
