@@ -955,9 +955,17 @@ async function geocodeAddress(address) {
     
     try {
         const response = await fetch(url, {
-            headers: { 'User-Agent': OSM_CONFIG.USER_AGENT }
+            headers: {
+                'User-Agent': 'SmartBillingApp/1.0',
+                'Accept': 'application/json',
+                'Origin': window.location.origin
+            },
+            mode: 'cors'
         });
-        await new Promise(resolve => setTimeout(resolve, 1000)); // rate limit
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         const data = await response.json();
         if (data.length > 0) {
@@ -4547,14 +4555,13 @@ function renderBudget() {
     }
 }
 function saveProfile() {
-    console.log('💾 SALVATAGGIO PROFILO CON VALIDAZIONE COMPLETA');
+    console.log('💾 SALVATAGGIO PROFILO - INIZIO');
     
     // Raccogli TUTTI i dati (compreso indirizzo completo!)
     const firstName = document.getElementById('profile-firstname').value.trim();
     const lastName = document.getElementById('profile-lastname').value.trim();
     const email = document.getElementById('profile-email').value.trim();
     
-    // 🔴 QUESTI MANCANO NEL TUO! AGGIUNGILI!
     const homeStreet = document.getElementById('home-street').value.trim();
     const homeNumber = document.getElementById('home-number').value.trim();
     const homeCity = document.getElementById('home-city').value.trim();
@@ -4563,6 +4570,12 @@ function saveProfile() {
     
     const language = document.getElementById('profile-language').value;
     const currency = document.getElementById('profile-currency').value;
+    
+    console.log('📝 Dati raccolti:', {
+        firstName, lastName, email,
+        homeStreet, homeNumber, homeCity, homeProvince, homeCountry,
+        language, currency
+    });
     
     // VALIDAZIONE COMPLETA - tutti i campi obbligatori!
     const errors = [];
@@ -4585,7 +4598,7 @@ function saveProfile() {
         return;
     }
     
-    // 🔴 AGGIORNA TUTTI I CAMPI, non solo alcuni!
+    // 🔴 AGGIORNA TUTTI I CAMPI
     userProfile.firstName = firstName;
     userProfile.lastName = lastName;
     userProfile.email = email;
@@ -4603,16 +4616,9 @@ function saveProfile() {
     userProfile.currency = currency;
     userProfile.currencySymbol = currencies[currency]?.symbol || '€';
     
-    console.log('✅ Profilo aggiornato:', {
-        nome: firstName,
-        cognome: lastName,
-        indirizzo: userProfile.homeFullAddress,
-        lingua: userProfile.language,
-        valuta: userProfile.currency,
-        simbolo: userProfile.currencySymbol
-    });
+    console.log('✅ userProfile aggiornato:', userProfile);
     
-    // SALVA in localStorage
+    // SALVA in localStorage (una volta sola!)
     try {
         localStorage.setItem('smart_billing_profile_v2', JSON.stringify(userProfile));
         console.log('💾 Salvato in localStorage');
@@ -4621,42 +4627,17 @@ function saveProfile() {
         showToast('⚠️ Errore nel salvataggio');
         return;
     }
-    // SALVA in localStorage
-try {
-    localStorage.setItem('smart_billing_profile_v2', JSON.stringify(userProfile));
-    console.log('💾 Salvato in localStorage');
-} catch (e) {
-    console.log('⚠️ localStorage fallito:', e);
-    showToast('⚠️ Errore nel salvataggio');
-    return;
-}
-
-// 🔥 GEOCODING DELL'INDIRIZZO (AGGIUNGI QUI)
-if (userProfile.homeFullAddress) {
-    geocodeAddress(userProfile.homeFullAddress).then(coords => {
-        if (coords) {
-            userProfile.homeLat = coords.lat;
-            userProfile.homeLon = coords.lon;
-            localStorage.setItem('smart_billing_profile_v2', JSON.stringify(userProfile));
-            console.log('📍 Coordinate salvate:', coords);
-        }
-    }).catch(error => {
-        console.log('⚠️ Geocoding fallito:', error);
-        // Non blocchiamo il salvataggio se il geocoding fallisce
-    });
-}
     
-    // 🔴 QUESTA È LA RIGA FONDAMENTALE PER TRADURRE!
+    // 🔴 QUESTA È LA RIGA FONDAMENTALE PER TRADURRE! (VA MESSA QUI, FUORI DAL GEOCODING)
     applyLanguageSettings();
     updateCurrencyLabel();
-    fixAmountLabel();  // <-- AGGIUNGI QUESTA RIGA
-
-    // 🔥 AGGIUNGI ANCHE QUESTE PER I MENU A TENDINA
+    fixAmountLabel();
     translateCategoryDropdowns();
     translateSelectPlaceholders();
     
     showScreen('dashboard');
     
+    // Aggiorna TUTTI i componenti
     setTimeout(() => {
         updateDashboard();
         renderRecentTransactions();
@@ -4664,23 +4645,33 @@ if (userProfile.homeFullAddress) {
         renderBudget();
         renderAllTransactions();
         
+        // 🔥 FORZA ANCHE L'AGGIORNAMENTO DELL'ICONA PROFILO
+        const profileIcon = document.querySelector('button[onclick="showScreen(\'profile\')"] i');
+        if (profileIcon) {
+            profileIcon.className = 'fas fa-user text-blue-500';  // Rendi blu
+        }
+        
         const langName = languages[language]?.name || language;
         const currName = currencies[currency]?.name || currency;
         showToast(`✅ Profilo salvato! Lingua: ${langName}, Valuta: ${currName}`);
-    }, 100);
-}
-function checkProfile() {
-    const saved = sessionStorage.getItem('smartBillingProfile');
-    if (saved) {
-        const profile = JSON.parse(saved);
-        console.log('PROFILO SALVATO:', profile);
-        console.log('Lingua:', profile.language);
-        console.log('Valuta:', profile.currency);
-        console.log('Simbolo:', profile.currencySymbol);
-        return true;
-    } else {
-        console.log('Nessun profilo salvato');
-        return false;
+    }, 200);
+    
+    // 🔥 GEOCODING DELL'INDIRIZZO (IN BACKGROUND, NON BLOCCA IL RITORNO ALLA DASHBOARD)
+    if (userProfile.homeFullAddress) {
+        console.log('📍 Avvio geocoding per:', userProfile.homeFullAddress);
+        
+        geocodeAddress(userProfile.homeFullAddress).then(coords => {
+            if (coords) {
+                userProfile.homeLat = coords.lat;
+                userProfile.homeLon = coords.lon;
+                localStorage.setItem('smart_billing_profile_v2', JSON.stringify(userProfile));
+                console.log('📍 Coordinate salvate:', coords);
+            } else {
+                console.log('⚠️ Geocoding non ha trovato coordinate');
+            }
+        }).catch(error => {
+            console.log('⚠️ Geocoding fallito:', error);
+        });
     }
 }
     // ==================== TRANSACTIONS FUNCTIONS ====================
@@ -4862,25 +4853,46 @@ function checkProfile() {
         }
     }
 
-    // ==================== STORE FUNCTIONS - CORRETTE ====================
-    function findNearbyStores() {
-        // ... codice esistente ...
-    }
 
     // ==================== STORE FUNCTIONS - CORRETTE ====================
     function findNearbyStores() {
-        if (!userProfile.homeFullAddress || !userProfile.homeStreet) {
-            showToast('⚠️ Imposta prima il tuo indirizzo nel profilo');
-            showScreen('profile');
-            return;
-        }
-        
-        showScreen('shopping');
-        
-        setTimeout(() => {
-            renderNearbyStores();
-        }, 100);
+    if (!userProfile.homeFullAddress || !userProfile.homeStreet) {
+        showToast('⚠️ Imposta prima il tuo indirizzo nel profilo');
+        showScreen('profile');
+        return;
     }
+    
+    // 🔥 VERIFICA SE LE COORDINATE SONO GIÀ DISPONIBILI
+    if (!userProfile.homeLat || !userProfile.homeLon) {
+        showToast('⏳ Calcolo coordinate in corso...');
+        
+        // Forza la geocodifica
+        geocodeAddress(userProfile.homeFullAddress).then(coords => {
+            if (coords) {
+                userProfile.homeLat = coords.lat;
+                userProfile.homeLon = coords.lon;
+                localStorage.setItem('smart_billing_profile_v2', JSON.stringify(userProfile));
+                console.log('📍 Coordinate calcolate al volo:', coords);
+                
+                // Ora vai alla schermata shopping
+                showScreen('shopping');
+                setTimeout(() => {
+                    renderNearbyStores();
+                }, 100);
+            } else {
+                showToast('❌ Indirizzo non trovato');
+                showScreen('profile');
+            }
+        });
+        return;
+    }
+    
+    // Se le coordinate esistono già, procedi normalmente
+    showScreen('shopping');
+    setTimeout(() => {
+        renderNearbyStores();
+    }, 100);
+}
 
     async function renderNearbyStores() {
     const container = document.getElementById('nearby-stores');
