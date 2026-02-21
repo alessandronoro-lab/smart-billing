@@ -918,9 +918,17 @@ if (document.readyState === 'loading') {
                         <i class="fas fa-times"></i> <span data-translate="cancel">Annulla</span>
                     </button>
                 </div>
-                </div>
+                <!-- 🔥 BOTTONE RESET - AGGIUNTO QUI -->
+                <div class="mt-4">
+                <button onclick="resetAllData()" 
+                        class="w-full py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 flex items-center justify-center gap-2">
+                    <i class="fas fa-trash mr-2"></i> <span data-translate="reset-all-data">Cancella tutti i dati</span>
+                </button>
             </div>
-        </div>
+
+        </div> <!-- Questa chiude il div class="space-y-8" -->
+    </div> <!-- Questa chiude il div class="bg-white rounded-xl shadow p-6" -->
+</div> <!-- Questa chiude screen-profile -->
         
         <!-- ==================== SCREEN 8: TUTTE LE TRANSAZIONI ==================== -->
         <div id="screen-transactions" class="screen">
@@ -3101,6 +3109,9 @@ async function addAsIs(productName) {
         source: bestPrice.source,
         confidence: bestPrice.confidence
     });
+
+    // 🔥 SALVA I DATI
+saveAllData();
     
     input.value = '';
     renderShoppingList();
@@ -4141,6 +4152,9 @@ if (shoppingCountEl) {
         
         document.getElementById('income-desc').value = '';
         document.getElementById('income-amount').value = '';
+
+        // 🔥 SALVA I DATI
+    saveAllData();
         
         showToast('💰 Entrata registrata con successo!');
         showScreen('dashboard');
@@ -4210,6 +4224,9 @@ if (shoppingCountEl) {
     document.getElementById('expense-amount').value = '';
     document.getElementById('expense-category').value = 'Altro';
     document.getElementById('category-suggestion-hint').classList.add('hidden');
+
+    // 🔥 SALVA I DATI
+    saveAllData();
     
     showToast(`📤 Uscita registrata! Prezzo di ${productName} salvato per ${storeName}`);
     showScreen('dashboard');
@@ -4304,6 +4321,8 @@ function adjustQuantity(itemId, change) {
     const item = shoppingList.find(i => i.id === itemId);
     if (item) {
         item.quantity = Math.max(1, (item.quantity || 1) + change);
+        // 🔥 SALVA I DATI
+        saveAllData();
         renderShoppingList();
     }
 }
@@ -4499,6 +4518,8 @@ window.submitPriceCorrectionWithStore = function(itemId) {
 // ==================== FUNZIONE PER RIMUOVERE PRODOTTO ====================
 function removeShoppingItem(id) {
     shoppingList = shoppingList.filter(item => item.id !== id);
+    // 🔥 SALVA I DATI
+    saveAllData();
     renderShoppingList();
     showToast('🗑️ Articolo rimosso');
 }
@@ -4527,6 +4548,9 @@ function toggleShoppingItem(id) {
                 store: storeName
             });
             
+            // 🔥 SALVA I DATI DOPO AVER AGGIUNTO LA TRANSAZIONE
+            saveAllData();
+
             showToast(`💰 ${item.name} aggiunto alle transazioni - ${formatCurrency(item.bestPrice * (item.quantity || 1))}`);
             updateDashboard();
         }
@@ -4823,6 +4847,8 @@ window.confirmQuantityWithStore = function(itemName) {
 
     function updateBudget(category, value) {
         budget[category] = parseFloat(value) || 0;
+        // 🔥 SALVA I DATI
+    saveAllData();
         updateDashboard();
     }
 
@@ -4946,15 +4972,8 @@ function saveProfile() {
     
     console.log('✅ userProfile aggiornato:', userProfile);
     
-    // SALVA in localStorage (una volta sola!)
-    try {
-        localStorage.setItem('smart_billing_profile_v2', JSON.stringify(userProfile));
-        console.log('💾 Salvato in localStorage');
-    } catch (e) {
-        console.log('⚠️ localStorage fallito:', e);
-        showToast('⚠️ Errore nel salvataggio');
-        return;
-    }
+    // 🔥 SALVA TUTTI I DATI (compreso il profilo appena aggiornato)
+    saveAllData();
     
     // 🔴 QUESTA È LA RIGA FONDAMENTALE PER TRADURRE! (VA MESSA QUI, FUORI DAL GEOCODING)
     applyLanguageSettings();
@@ -7411,6 +7430,8 @@ function getTranslations(lang) {
             'chemist': 'Drogeria',
             'pharmacy': 'Farmacia',
             'department_store': 'Grande magazzino',
+            'reset-all-data': 'Cancella tutti i dati',
+            'confirm-reset': '⚠️ Sei sicuro? Tutti i dati verranno cancellati!',
             'other': 'Altro',
         },
         'en': {
@@ -7565,6 +7586,8 @@ function getTranslations(lang) {
             'chemist': 'Chemist',
             'pharmacy': 'Pharmacy',
             'department_store': 'Department store',
+            'reset-all-data': 'Delete all data',
+            'confirm-reset': '⚠️ Are you sure? All data will be deleted!',
             'other': 'Other',
         },
         'es': {
@@ -7721,6 +7744,8 @@ function getTranslations(lang) {
             'chemist': 'Droguería',
             'pharmacy': 'Farmacia',
             'department_store': 'Grandes almacenes',
+            'reset-all-data': 'Borrar todos los datos',
+            'confirm-reset': '⚠️ ¿Estás seguro? ¡Todos los datos serán borrados!',
             'other': 'Otro',
         },
         'fr': {
@@ -7877,6 +7902,8 @@ function getTranslations(lang) {
             'chemist': 'Droguerie',
             'pharmacy': 'Pharmacie',
             'department_store': 'Grand magasin',
+            'reset-all-data': 'Supprimer toutes les données',
+            'confirm-reset': '⚠️ Êtes-vous sûr ? Toutes les données seront supprimées !',
             'other': 'Autre',
         },
         'de': {
@@ -8033,6 +8060,8 @@ function getTranslations(lang) {
             'chemist': 'Drogerie',
             'pharmacy': 'Apotheke',
             'department_store': 'Kaufhaus',
+            'reset-all-data': 'Alle Daten löschen',
+            'confirm-reset': '⚠️ Sind Sie sicher? Alle Daten werden gelöscht!',
             'other': 'Sonstiges',
         },
         'ro': {
@@ -8189,6 +8218,8 @@ function getTranslations(lang) {
             'chemist': 'Drogherie',
             'pharmacy': 'Farmacie',
             'department_store': 'Magazin universal',
+            'reset-all-data': 'Șterge toate datele',
+            'confirm-reset': '⚠️ Ești sigur? Toate datele vor fi șterse!',
             'other': 'Altele',
         }
     };
@@ -8448,10 +8479,112 @@ window.showPriceCorrectionModal = showPriceCorrectionModal;
 window.submitPriceCorrection = submitPriceCorrection;
 
 console.log('✅ Funzioni prezzi attaccate a window');
+// ==================== PERSISTENZA DATI ====================
+
+// Carica tutti i dati dal localStorage
+function loadAllData() {
+    console.log('📂 Caricamento dati salvati...');
+    
+    try {
+        // Carica profilo
+        const savedProfile = localStorage.getItem('smart_billing_profile');
+        if (savedProfile) {
+            userProfile = JSON.parse(savedProfile);
+            console.log('✅ Profilo caricato');
+        }
+        
+        // Carica transazioni
+        const savedTransactions = localStorage.getItem('smart_billing_transactions');
+        if (savedTransactions) {
+            transactions = JSON.parse(savedTransactions);
+            console.log(`✅ ${transactions.length} transazioni caricate`);
+        }
+        
+        // Carica lista spesa
+        const savedShoppingList = localStorage.getItem('smart_billing_shopping');
+        if (savedShoppingList) {
+            shoppingList = JSON.parse(savedShoppingList);
+            console.log(`✅ ${shoppingList.length} articoli in lista caricati`);
+        }
+        
+        // Carica budget
+        const savedBudget = localStorage.getItem('smart_billing_budget');
+        if (savedBudget) {
+            budget = JSON.parse(savedBudget);
+            console.log('✅ Budget caricato');
+        }
+        
+        // Carica prezzi utente
+        const savedPrices = localStorage.getItem('userPriceDB');
+        if (savedPrices) {
+            userPriceDB = JSON.parse(savedPrices);
+            console.log('✅ Database prezzi caricato');
+        }
+        
+        // Carica negozi utente
+        const savedStores = localStorage.getItem('userStores');
+        if (savedStores) {
+            window.userStores = JSON.parse(savedStores);
+            console.log(`✅ ${window.userStores.length} negozi utente caricati`);
+        }
+        
+        console.log('✅ TUTTI I DATI CARICATI CON SUCCESSO');
+    } catch (e) {
+        console.log('⚠️ Errore nel caricamento dati:', e);
+    }
+}
+
+// Salva tutti i dati nel localStorage
+function saveAllData() {
+    try {
+        localStorage.setItem('smart_billing_profile', JSON.stringify(userProfile));
+        localStorage.setItem('smart_billing_transactions', JSON.stringify(transactions));
+        localStorage.setItem('smart_billing_shopping', JSON.stringify(shoppingList));
+        localStorage.setItem('smart_billing_budget', JSON.stringify(budget));
+        localStorage.setItem('userPriceDB', JSON.stringify(userPriceDB));
+        localStorage.setItem('userStores', JSON.stringify(window.userStores));
+        
+        console.log('✅ Tutti i dati salvati');
+        return true;
+    } catch (e) {
+        console.log('⚠️ Errore nel salvataggio dati:', e);
+        return false;
+    }
+}
+// ==================== RESET DATI ====================
+function resetAllData() {
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
+    if (confirm(t['confirm-reset'] || '⚠️ Sei sicuro? Tutti i dati verranno cancellati!')) {
+        // Svuota tutti gli array
+        transactions = [];
+        shoppingList = [];
+        budget = {
+            Alimentari: 0,
+            Affitto: 0,
+            Mutuo: 0,
+            Bollette: 0,
+            Trasporti: 0,
+            Svago: 0,
+            Salute: 0
+        };
+        userPriceDB = {};
+        window.userStores = [];
+        
+        // Salva lo svuotamento
+        saveAllData();
+        
+        showToast('🗑️ ' + (t['reset-all-data'] || 'Tutti i dati cancellati'));
+        showScreen('dashboard');
+    }
+}
 
     // ==================== INITIALIZE ====================
 function initApp() {
     console.log('🚀 === INIZIALIZZAZIONE APP ===');
+    // 🔥 CARICA TUTTI I DATI SALVATI
+    loadAllData();
     
     // 🔥 FUNZIONE PER RILEVARE LINGUA DISPOSITIVO
     function detectDeviceLanguage() {
