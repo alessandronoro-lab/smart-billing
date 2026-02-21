@@ -547,23 +547,149 @@
             </div>
             
             <!-- Nearby Stores -->
-            <div class="bg-white rounded-xl shadow p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">
-                    <i class="fas fa-store text-blue-500 mr-2"></i>Negozi Vicini
-                </h2>
-                
-                <div id="nearby-stores" class="space-y-3">
-                    <p class="text-gray-500 text-center py-4">
-                        Imposta il tuo indirizzo nel profilo per trovare negozi
-                    </p>
-                </div>
-                
-                <button id="search-stores-btn" onclick="renderNearbyStores()" 
-                        class="w-full mt-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-2">
-                    <i class="fas fa-search mr-2"></i>Cerca Negozi Vicini
-                </button>
-            </div>
-        </div>
+<div class="bg-white rounded-xl shadow p-6">
+<h2 class="text-lg font-semibold text-gray-800 mb-4">
+    <i class="fas fa-store text-blue-500 mr-2"></i>
+    <span id="nearby-stores-title">Negozi Vicini</span>
+</h2>
+
+<!-- Selettore posizione -->
+<div class="mb-4 p-4 bg-gray-50 rounded-lg">
+    <p class="text-sm font-medium text-gray-700 mb-3" id="search-location-text">Cerca negozi vicino a:</p>
+    <div class="flex flex-wrap gap-2">
+        <button id="location-home-btn" onclick="setLocation('home')" 
+                class="flex-1 py-2 px-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center justify-center gap-2">
+            <i class="fas fa-home"></i> <span id="home-text">Casa</span>
+        </button>
+        <button id="location-work-btn" onclick="setLocation('work')" 
+                class="flex-1 py-2 px-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 flex items-center justify-center gap-2">
+            <i class="fas fa-briefcase"></i> <span id="work-text">Lavoro</span>
+        </button>
+        <button id="location-current-btn" onclick="setLocation('current')" 
+                class="flex-1 py-2 px-3 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center justify-center gap-2">
+            <i class="fas fa-location-dot"></i> <span id="current-location-text-btn">Posizione attuale</span>
+        </button>
+    </div>
+    <div id="selected-location-display" class="mt-2 text-sm text-gray-600">
+        <i class="fas fa-map-pin mr-1"></i> <span id="searching-near-text">Cerco negozi vicino a:</span> 
+        <span id="current-location-text" class="font-semibold">Casa</span>
+    </div>
+</div>
+
+<div id="nearby-stores" class="space-y-3">
+    <p class="text-gray-500 text-center py-4" id="set-address-message-text">
+        Imposta il tuo indirizzo nel profilo per trovare negozi
+    </p>
+</div>
+
+<button id="search-stores-btn" onclick="findNearbyStores()" 
+        class="w-full mt-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-2">
+    <i class="fas fa-search mr-2"></i><span id="find-nearby-stores-text">Cerca Negozi Vicini</span>
+</button>
+</div> <!-- CHIUDE IL BLOCCO NEGOZI -->
+
+<!-- SCRIPT PER FORZARE LE TRADUZIONI -->
+<script>
+(function() {
+// Funzione per tradurre la schermata negozi
+function translateNearbyStores() {
+    try {
+        // Leggi la lingua dal localStorage
+        const profile = JSON.parse(localStorage.getItem('smart_billing_profile_v2') || '{}');
+        const lang = profile.language || 'it';
+        
+        // Dizionario traduzioni per la schermata negozi
+        const translations = {
+            'it': {
+                'nearby-stores': 'Negozi Vicini',
+                'search-location': 'Cerca negozi vicino a:',
+                'home': 'Casa',
+                'work': 'Lavoro',
+                'current-location': 'Posizione attuale',
+                'searching-near': 'Cerco negozi vicino a:',
+                'set-address-message': 'Imposta il tuo indirizzo nel profilo per trovare negozi',
+                'find-nearby-stores': 'Cerca Negozi Vicini'
+            },
+            'en': {
+                'nearby-stores': 'Nearby Stores',
+                'search-location': 'Search stores near:',
+                'home': 'Home',
+                'work': 'Work',
+                'current-location': 'Current location',
+                'searching-near': 'Searching stores near:',
+                'set-address-message': 'Set your address in the profile to find stores',
+                'find-nearby-stores': 'Find Nearby Stores'
+            },
+            'es': {
+                'nearby-stores': 'Tiendas Cercanas',
+                'search-location': 'Buscar tiendas cerca de:',
+                'home': 'Casa',
+                'work': 'Trabajo',
+                'current-location': 'Ubicación actual',
+                'searching-near': 'Buscando tiendas cerca de:',
+                'set-address-message': 'Configura tu dirección en el perfil para encontrar tiendas',
+                'find-nearby-stores': 'Buscar Tiendas Cercanas'
+            },
+            'fr': {
+                'nearby-stores': 'Magasins Proches',
+                'search-location': 'Chercher des magasins près de:',
+                'home': 'Domicile',
+                'work': 'Travail',
+                'current-location': 'Position actuelle',
+                'searching-near': 'Recherche de magasins près de:',
+                'set-address-message': 'Configurez votre adresse dans le profil pour trouver des magasins',
+                'find-nearby-stores': 'Trouver des Magasins Proches'
+            },
+            'de': {
+                'nearby-stores': 'Geschäfte in der Nähe',
+                'search-location': 'Geschäfte suchen in der Nähe von:',
+                'home': 'Zuhause',
+                'work': 'Arbeit',
+                'current-location': 'Aktueller Standort',
+                'searching-near': 'Suche Geschäfte in der Nähe von:',
+                'set-address-message': 'Legen Sie Ihre Adresse im Profil fest, um Geschäfte zu finden',
+                'find-nearby-stores': 'Geschäfte in der Nähe finden'
+            },
+            'ro': {
+                'nearby-stores': 'Magazine Apropiate',
+                'search-location': 'Caută magazine lângă:',
+                'home': 'Acasă',
+                'work': 'Serviciu',
+                'current-location': 'Locația curentă',
+                'searching-near': 'Caut magazine lângă:',
+                'set-address-message': 'Setează adresa în profil pentru a găsi magazine',
+                'find-nearby-stores': 'Găsește Magazine Apropiate'
+            }
+        };
+        
+        const t = translations[lang] || translations['it'];
+        
+        // Applica le traduzioni
+        document.getElementById('nearby-stores-title').textContent = t['nearby-stores'];
+        document.getElementById('search-location-text').textContent = t['search-location'];
+        document.getElementById('home-text').textContent = t['home'];
+        document.getElementById('work-text').textContent = t['work'];
+        document.getElementById('current-location-text-btn').textContent = t['current-location'];
+        document.getElementById('searching-near-text').textContent = t['searching-near'];
+        document.getElementById('set-address-message-text').textContent = t['set-address-message'];
+        document.getElementById('find-nearby-stores-text').textContent = t['find-nearby-stores'];
+        
+        console.log('🌐 Schermata negozi tradotta in:', lang);
+    } catch (e) {
+        console.log('Errore traduzione negozi:', e);
+    }
+}
+
+// Esegui quando la pagina è caricata
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', translateNearbyStores);
+} else {
+    translateNearbyStores();
+}
+})();
+</script>
+
+</div> <!-- CHIUDE screen-shopping -->
         
         <!-- ==================== SCREEN 6: GESTIONE BUDGET ==================== -->
         <div id="screen-budget" class="screen">
@@ -996,7 +1122,12 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 // Formatta distanza
 function formatDistance(distance) {
-    return distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`;
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
+    return distance < 1 ? 
+        `${Math.round(distance * 1000)} ${t['m'] || 'm'}` : 
+        `${distance.toFixed(1)} ${t['km'] || 'km'}`;
 }
 
 // Cerca negozi con Overpass API
@@ -1033,13 +1164,21 @@ async function findNearbyShops(lat, lon, radius = OSM_CONFIG.SEARCH_RADIUS) {
 
 // Traduci tipo negozio
 function getShopTypeTranslation(type) {
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
     const translations = {
-        'supermarket': 'Supermercato', 'convenience': 'Alimentari',
-        'grocery': 'Drogheria', 'greengrocer': 'Fruttivendolo',
-        'butcher': 'Macelleria', 'bakery': 'Panetteria',
-        'chemist': 'Drogeria', 'pharmacy': 'Farmacia',
-        'department_store': 'Grande magazzino'
+        'supermarket': t['supermarket'] || 'Supermercato',
+        'convenience': t['convenience'] || 'Alimentari',
+        'grocery': t['grocery'] || 'Drogheria',
+        'greengrocer': t['greengrocer'] || 'Fruttivendolo',
+        'butcher': t['butcher'] || 'Macelleria',
+        'bakery': t['bakery'] || 'Panetteria',
+        'chemist': t['chemist'] || 'Drogeria',
+        'pharmacy': t['pharmacy'] || 'Farmacia',
+        'department_store': t['department_store'] || 'Grande magazzino'
     };
+    
     return translations[type] || type;
 }
 
@@ -1120,13 +1259,16 @@ let shoppingList = [];  // Lista vuota all'avvio
 
 let budget = {
     Alimentari: 0,
+    Mutuo: 0,        // <-- AGGIUNGI QUI
     Affitto: 0,
     Bollette: 0,
     Trasporti: 0,
     Svago: 0,
     Salute: 0
 };
-
+// ==================== VARIABILI GEOLOCALIZZAZIONE ====================
+let currentLocationType = 'home'; // 'home', 'work', 'current'
+let currentCoords = null; // Per la posizione attuale (lat, lon)
 
 // ==================== DATABASE NEGOZI ====================
 // Inizializza le variabili globali
@@ -1641,6 +1783,195 @@ window.saveNewStoreWithPrice = async function(itemId) {
 
 // Rendi globali le funzioni
 window.showNewStoreModal = showNewStoreModal;
+// ==================== GESTIONE POSIZIONE ====================
+function setLocation(type) {
+    currentLocationType = type;
+    
+    // Aggiorna UI dei bottoni
+    document.querySelectorAll('[id^="location-"]').forEach(btn => {
+        btn.classList.remove('bg-blue-500', 'text-white', 'bg-purple-500', 'bg-green-500');
+        btn.classList.add('bg-blue-100', 'text-blue-700', 'bg-purple-100', 'text-purple-700', 'bg-green-100', 'text-green-700');
+    });
+    
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
+    let locationText = '';
+    
+    if (type === 'home') {
+        document.getElementById('location-home-btn').classList.remove('bg-blue-100', 'text-blue-700');
+        document.getElementById('location-home-btn').classList.add('bg-blue-500', 'text-white');
+        locationText = t['home'] || 'Casa';
+        
+    } else if (type === 'work') {
+        document.getElementById('location-work-btn').classList.remove('bg-purple-100', 'text-purple-700');
+        document.getElementById('location-work-btn').classList.add('bg-purple-500', 'text-white');
+        locationText = t['work'] || 'Lavoro';
+        
+        // Verifica se l'indirizzo di lavoro è impostato
+        if (!userProfile.workFullAddress && !userProfile.workStreet) {
+            showToast('⚠️ ' + (t['work-address-not-set'] || 'Imposta prima l\'indirizzo di lavoro nel profilo'));
+            setLocation('home');
+            return;
+        }
+        
+    } else if (type === 'current') {
+        document.getElementById('location-current-btn').classList.remove('bg-green-100', 'text-green-700');
+        document.getElementById('location-current-btn').classList.add('bg-green-500', 'text-white');
+        locationText = t['current-location'] || 'Posizione attuale';
+        
+        // Ottieni la posizione corrente
+        getCurrentPosition();
+    }
+    
+    document.getElementById('current-location-text').textContent = locationText;
+}
+// ==================== OTTIENI POSIZIONE GPS ====================
+function getCurrentPosition() {
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
+    if (!navigator.geolocation) {
+        showToast('⚠️ ' + (t['location-not-supported'] || 'Geolocalizzazione non supportata'));
+        setLocation('home');
+        return;
+    }
+    
+    showToast('📍 ' + (t['getting-location'] || 'Ottenimento posizione...'));
+    
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            currentCoords = {
+                lat: position.coords.latitude,
+                lon: position.coords.longitude
+            };
+            console.log('📍 Posizione attuale:', currentCoords);
+            showToast('✅ ' + (t['location-obtained'] || 'Posizione ottenuta'));
+        },
+        (error) => {
+            console.error('Errore geolocalizzazione:', error);
+            let errorMsg = t['location-error'] || 'Errore nel ottenere la posizione';
+            if (error.code === 1) errorMsg = t['location-permission-denied'] || 'Permesso negato';
+            if (error.code === 2) errorMsg = t['location-not-available'] || 'Posizione non disponibile';
+            if (error.code === 3) errorMsg = t['location-timeout'] || 'Timeout';
+            showToast(`⚠️ ${errorMsg}`);
+            setLocation('home');
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
+// ==================== RICERCA NEGOZI CON COORDINATE ====================
+async function renderNearbyStoresWithCoords(lat, lon) {
+    const container = document.getElementById('nearby-stores');
+    const searchBtn = document.getElementById('search-stores-btn');
+    
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
+    const originalBtnText = searchBtn.innerHTML;
+    searchBtn.innerHTML = `<div class="store-loader"></div> ${t['searching'] || 'Ricerca in corso...'}`;
+    searchBtn.disabled = true;
+    
+    container.innerHTML = `<p class="text-center text-gray-500 py-4">🔍 ${t['searching-nearby'] || 'Cerco negozi nelle vicinanze...'}</p>`;
+    
+    try {
+        // Cerca negozi con le coordinate fornite
+        const shops = await findNearbyShops(lat, lon);
+        
+        container.innerHTML = '';
+        
+        // Header con tipo di posizione
+        let locationText = '';
+        if (currentLocationType === 'home') locationText = t['home'] || 'Casa';
+        else if (currentLocationType === 'work') locationText = t['work'] || 'Lavoro';
+        else if (currentLocationType === 'current') locationText = t['current-location'] || 'Posizione attuale';
+        
+        container.innerHTML += `
+            <div class="p-3 bg-blue-50 rounded-lg mb-4">
+                <p class="text-sm text-gray-600">${t['searching-near'] || 'Negozi vicino a:'}</p>
+                <p class="font-semibold text-blue-800">${locationText}</p>
+            </div>
+        `;
+        
+        if (shops.length === 0) {
+            container.innerHTML += `
+                <div class="text-center py-8">
+                    <i class="fas fa-store-slash text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500">${t['no-stores-found'] || 'Nessun negozio trovato nel raggio di'} ${OSM_CONFIG.SEARCH_RADIUS/1000}${t['km'] || 'km'}</p>
+                </div>
+            `;
+        } else {
+            // Calcola e ordina per distanza
+            const shopsWithDistance = shops.map(shop => {
+                const distance = calculateDistance(
+                    lat, lon,
+                    parseFloat(shop.lat || shop.center?.lat || 0),
+                    parseFloat(shop.lon || shop.center?.lon || 0)
+                );
+                return { ...shop, distance };
+            }).sort((a, b) => a.distance - b.distance);
+            
+            shopsWithDistance.forEach(shop => {
+                const name = shop.tags?.name || shop.tags?.brand || (t['store'] || 'Negozio');
+                const type = shop.tags?.shop || 'generico';
+                const distanceValue = shop.distance;
+                const distance = distanceValue < 1 ? 
+                    `${Math.round(distanceValue * 1000)}${t['m'] || 'm'}` : 
+                    `${distanceValue.toFixed(1)}${t['km'] || 'km'}`;
+                const address = shop.tags?.['addr:street'] ? 
+                    `${shop.tags['addr:street']} ${shop.tags['addr:housenumber'] || ''}`.trim() : 
+                    (t['address-not-available'] || 'Indirizzo non disponibile');
+                
+                container.innerHTML += `
+                    <div class="p-4 border rounded-lg mb-3 hover:shadow-md transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-bold text-gray-800">${name}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs bg-gray-100 px-2 py-1 rounded">
+                                        ${getShopTypeTranslation(type)}
+                                    </span>
+                                    <span class="text-sm text-gray-600">
+                                        <i class="fas fa-road mr-1"></i>${distance}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-2">
+                                    <i class="fas fa-map-pin mr-1"></i>${address}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML += `
+                <div class="mt-4 text-xs text-gray-400 text-center">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    ${t['osm-credit'] || 'Dati © contributori OpenStreetMap'}
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Errore:', error);
+        container.innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <i class="fas fa-exclamation-triangle text-4xl mb-3"></i>
+                <p>${t['search-error'] || 'Errore nella ricerca dei negozi'}</p>
+                <button onclick="showScreen('profile')" 
+                        class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                    ${t['go-to-profile'] || 'Vai al Profilo'}
+                </button>
+            </div>
+        `;
+    } finally {
+        searchBtn.innerHTML = originalBtnText;
+        searchBtn.disabled = false;
+    }
+}
     // ==================== SUGGERIMENTO CATEGORIE INTELLIGENTE ====================
     const categoryKeywords = {
         'Bollette': ['luce', 'elettrica', 'gas', 'acqua', 'riscaldamento', 'telefono', 'internet', 'fibra', 'adsl', 'enel', 'enel energia', 'energia', 'bolletta', 'fornitura', 'utenza'],
@@ -4412,10 +4743,7 @@ window.confirmQuantityWithStore = function(itemName) {
     }
 };
 
-// ==================== BUDGET FUNCTIONS ====================
-function renderBudget() {
-    // ...
-}
+
     // ==================== BUDGET FUNCTIONS ====================
     function renderBudget() {
     const container = document.getElementById('budget-items');
@@ -4856,53 +5184,65 @@ function saveProfile() {
 
     // ==================== STORE FUNCTIONS - CORRETTE ====================
     function findNearbyStores() {
-    if (!userProfile.homeFullAddress || !userProfile.homeStreet) {
-        showToast('⚠️ Imposta prima il tuo indirizzo nel profilo');
-        showScreen('profile');
-        return;
+    // Determina quale indirizzo/posizione usare
+    if (currentLocationType === 'current') {
+        if (currentCoords) {
+            // Usa le coordinate già ottenute
+            showScreen('shopping');
+            setTimeout(() => {
+                renderNearbyStoresWithCoords(currentCoords.lat, currentCoords.lon);
+            }, 100);
+            return;
+        } else {
+            showToast('📍 Ottenimento posizione...');
+            getCurrentPosition();
+            // Dopo aver ottenuto la posizione, la funzione verrà richiamata
+            setTimeout(() => {
+                if (currentCoords) {
+                    findNearbyStores();
+                }
+            }, 2000);
+            return;
+        }
     }
     
-    // 🔥 VERIFICA SE LE COORDINATE SONO GIÀ DISPONIBILI
-    if (!userProfile.homeLat || !userProfile.homeLon) {
-        showToast('⏳ Calcolo coordinate in corso...');
-        
-        // Forza la geocodifica
-        geocodeAddress(userProfile.homeFullAddress).then(coords => {
-            if (coords) {
-                userProfile.homeLat = coords.lat;
-                userProfile.homeLon = coords.lon;
-                localStorage.setItem('smart_billing_profile_v2', JSON.stringify(userProfile));
-                console.log('📍 Coordinate calcolate al volo:', coords);
-                
-                // Ora vai alla schermata shopping
-                showScreen('shopping');
-                setTimeout(() => {
-                    renderNearbyStores();
-                }, 100);
-            } else {
-                showToast('❌ Indirizzo non trovato');
-                showScreen('profile');
-            }
-        });
-        return;
+    // Altrimenti usa l'indirizzo (casa o lavoro)
+    let address = '';
+    if (currentLocationType === 'home') {
+        address = userProfile.homeFullAddress;
+        if (!address) {
+            showToast('⚠️ Imposta prima il tuo indirizzo di casa nel profilo');
+            showScreen('profile');
+            return;
+        }
+    } else if (currentLocationType === 'work') {
+        address = userProfile.workFullAddress;
+        if (!address) {
+            showToast('⚠️ Imposta prima il tuo indirizzo di lavoro nel profilo');
+            showScreen('profile');
+            return;
+        }
     }
     
-    // Se le coordinate esistono già, procedi normalmente
     showScreen('shopping');
     setTimeout(() => {
-        renderNearbyStores();
+        renderNearbyStores(); // La tua funzione esistente che usa l'indirizzo
     }, 100);
 }
 
-    async function renderNearbyStores() {
+async function renderNearbyStores() {
     const container = document.getElementById('nearby-stores');
     const searchBtn = document.getElementById('search-stores-btn');
     
+    // 🔥 OTTIENI LE TRADUZIONI
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
     const originalBtnText = searchBtn.innerHTML;
-    searchBtn.innerHTML = '<div class="store-loader"></div> Ricerca in corso...';
+    searchBtn.innerHTML = `<div class="store-loader"></div> ${t['searching'] || 'Ricerca in corso...'}`;
     searchBtn.disabled = true;
     
-    container.innerHTML = '<p class="text-center text-gray-500 py-4">🔍 Cerco negozi nelle vicinanze...</p>';
+    container.innerHTML = `<p class="text-center text-gray-500 py-4">🔍 ${t['searching-nearby'] || 'Cerco negozi nelle vicinanze...'}</p>`;
     
     try {
         if (!userProfile.homeFullAddress) {
@@ -4929,17 +5269,16 @@ function saveProfile() {
         // Cerca negozi
         const shops = await findNearbyShops(lat, lon);
 
-         // 🔥 NUOVO: Aggiorna il database negozi con quelli trovati
-    if (shops.length > 0) {
-        updateStoresFromOSM(shops);
-    }
+        if (shops.length > 0) {
+            updateStoresFromOSM(shops);
+        }
         
         container.innerHTML = '';
         
-        // Header indirizzo
+        // Header indirizzo - TRADOTTO
         container.innerHTML += `
             <div class="p-3 bg-blue-50 rounded-lg mb-4">
-                <p class="text-sm text-gray-600">Negozi vicino a:</p>
+                <p class="text-sm text-gray-600">${t['searching-near'] || 'Negozi vicino a:'}</p>
                 <p class="font-semibold text-blue-800">${userProfile.homeFullAddress}</p>
             </div>
         `;
@@ -4948,7 +5287,7 @@ function saveProfile() {
             container.innerHTML += `
                 <div class="text-center py-8">
                     <i class="fas fa-store-slash text-4xl text-gray-300 mb-3"></i>
-                    <p class="text-gray-500">Nessun negozio trovato nel raggio di ${OSM_CONFIG.SEARCH_RADIUS/1000}km</p>
+                    <p class="text-gray-500">${t['no-stores-found'] || 'Nessun negozio trovato nel raggio di'} ${OSM_CONFIG.SEARCH_RADIUS/1000}${t['km'] || 'km'}</p>
                 </div>
             `;
         } else {
@@ -4963,12 +5302,16 @@ function saveProfile() {
             }).sort((a, b) => a.distance - b.distance);
             
             shopsWithDistance.forEach(shop => {
-                const name = shop.tags?.name || shop.tags?.brand || 'Negozio';
+                // 🔥 TUTTI I TESTI TRADOTTI
+                const name = shop.tags?.name || shop.tags?.brand || t['store'] || 'Negozio';
                 const type = shop.tags?.shop || 'generico';
-                const distance = formatDistance(shop.distance);
+                const distanceValue = shop.distance;
+                const distance = distanceValue < 1 ? 
+                    `${Math.round(distanceValue * 1000)}${t['m'] || 'm'}` : 
+                    `${distanceValue.toFixed(1)}${t['km'] || 'km'}`;
                 const address = shop.tags?.['addr:street'] ? 
                     `${shop.tags['addr:street']} ${shop.tags['addr:housenumber'] || ''}`.trim() : 
-                    'Indirizzo non disponibile';
+                    (t['address-not-available'] || 'Indirizzo non disponibile');
                 
                 container.innerHTML += `
                     <div class="p-4 border rounded-lg mb-3 hover:shadow-md transition">
@@ -4995,7 +5338,7 @@ function saveProfile() {
             container.innerHTML += `
                 <div class="mt-4 text-xs text-gray-400 text-center">
                     <i class="fas fa-info-circle mr-1"></i>
-                    Dati © contributori OpenStreetMap
+                    ${t['osm-credit'] || 'Dati © contributori OpenStreetMap'}
                 </div>
             `;
         }
@@ -5004,11 +5347,11 @@ function saveProfile() {
             <div class="text-center py-8 text-red-500">
                 <i class="fas fa-exclamation-triangle text-4xl mb-3"></i>
                 <p>${error.message === 'Indirizzo non impostato' ? 
-                    'Imposta il tuo indirizzo nel profilo' : 
-                    'Errore nella ricerca dei negozi'}</p>
+                    (t['set-address-message'] || 'Imposta il tuo indirizzo nel profilo') : 
+                    (t['search-error'] || 'Errore nella ricerca dei negozi')}</p>
                 <button onclick="showScreen('profile')" 
                         class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                    Vai al Profilo
+                    ${t['go-to-profile'] || 'Vai al Profilo'}
                 </button>
             </div>
         `;
@@ -7028,6 +7371,46 @@ function getTranslations(lang) {
             'price-auto-hint': 'Se non inserisci un prezzo, verrà usato il miglior prezzo disponibile',
             'confirm': 'Conferma',
             'add-product-title': 'Aggiungi {product}',
+            'search-location': 'Cerca negozi vicino a:',
+            'home': 'Casa',
+            'work': 'Lavoro',
+            'current-location': 'Posizione attuale',
+            'searching-near': 'Cerco negozi vicino a:',
+            'set-address-message': 'Imposta il tuo indirizzo nel profilo per trovare negozi',
+            'find-nearby-stores': 'Cerca Negozi Vicini',
+            'searching': 'Ricerca in corso...',
+            'searching-nearby': 'Cerco negozi nelle vicinanze...',
+            'no-stores-found': 'Nessun negozio trovato nel raggio di',
+            'address-not-available': 'Indirizzo non disponibile',
+            'osm-credit': 'Dati © contributori OpenStreetMap',
+            'search-error': 'Errore nella ricerca dei negozi',
+            'go-to-profile': 'Vai al Profilo',
+            'getting-location': 'Ottenimento posizione...',
+            'location-obtained': 'Posizione ottenuta',
+            'location-not-supported': 'Geolocalizzazione non supportata',
+            'location-permission-denied': 'Permesso negato',
+            'location-timeout': 'Timeout',
+            'location-error': 'Errore nel ottenere la posizione',
+            'geocoding': 'Cerco coordinate...',
+            'address-not-found': 'Indirizzo non trovato',
+            'work-address-not-set': 'Imposta prima l\'indirizzo di lavoro nel profilo',
+            'searching-near': 'Cerco negozi vicino a:',
+            'set-address-message': 'Imposta il tuo indirizzo nel profilo per trovare negozi',
+            'address-not-available': 'Indirizzo non disponibile',
+            'store': 'Negozio',
+            'supermarket': 'Supermercato',
+            'searching': 'Ricerca in corso...',
+            'km': 'km',
+            'm': 'm',
+            'supermarket': 'Supermercato',
+            'convenience': 'Alimentari',
+            'grocery': 'Drogheria',
+            'greengrocer': 'Fruttivendolo',
+            'butcher': 'Macelleria',
+            'bakery': 'Panetteria',
+            'chemist': 'Drogeria',
+            'pharmacy': 'Farmacia',
+            'department_store': 'Grande magazzino',
             'other': 'Altro',
         },
         'en': {
@@ -7142,6 +7525,46 @@ function getTranslations(lang) {
             'price-auto-hint': 'If you leave this empty, the best available price will be used',
             'confirm': 'Confirm',
             'add-product-title': 'Add {product}',
+            'search-location': 'Search stores near:',
+            'home': 'Home',
+            'work': 'Work',
+            'current-location': 'Current location',
+            'searching-near': 'Searching stores near:',
+            'set-address-message': 'Set your address in the profile to find stores',
+            'find-nearby-stores': 'Find Nearby Stores',
+            'searching': 'Searching...',
+            'searching-nearby': 'Searching for nearby stores...',
+            'no-stores-found': 'No stores found within',
+            'address-not-available': 'Address not available',
+            'osm-credit': 'Data © OpenStreetMap contributors',
+            'search-error': 'Error searching for stores',
+            'go-to-profile': 'Go to Profile',
+            'getting-location': 'Getting location...',
+            'location-obtained': 'Location obtained',
+            'location-not-supported': 'Geolocation not supported',
+            'location-permission-denied': 'Permission denied',
+            'location-timeout': 'Timeout',
+            'location-error': 'Error getting location',
+            'geocoding': 'Searching coordinates...',
+            'address-not-found': 'Address not found',
+            'work-address-not-set': 'Set your work address in the profile first',
+            'searching-near': 'Searching stores near:',
+            'set-address-message': 'Set your address in the profile to find stores',
+            'address-not-available': 'Address not available',
+            'store': 'Store',
+            'supermarket': 'Supermarket',
+            'searching': 'Searching...',
+            'km': 'km',
+            'm': 'm',
+            'supermarket': 'Supermarket',
+            'convenience': 'Convenience store',
+            'grocery': 'Grocery',
+            'greengrocer': 'Greengrocer',
+            'butcher': 'Butcher',
+            'bakery': 'Bakery',
+            'chemist': 'Chemist',
+            'pharmacy': 'Pharmacy',
+            'department_store': 'Department store',
             'other': 'Other',
         },
         'es': {
@@ -7258,6 +7681,46 @@ function getTranslations(lang) {
             'price-auto-hint': 'Si no introduces un precio, se usará el mejor precio disponible',
             'confirm': 'Confirmar',
             'add-product-title': 'Añadir {product}',
+            'search-location': 'Buscar tiendas cerca de:',
+            'home': 'Casa',
+            'work': 'Trabajo',
+            'current-location': 'Ubicación actual',
+            'searching-near': 'Buscando tiendas cerca de:',
+            'set-address-message': 'Configura tu dirección en el perfil para encontrar tiendas',
+            'find-nearby-stores': 'Buscar Tiendas Cercanas',
+            'searching': 'Buscando...',
+            'searching-nearby': 'Buscando tiendas cercanas...',
+            'no-stores-found': 'No se encontraron tiendas en un radio de',
+            'address-not-available': 'Dirección no disponible',
+            'osm-credit': 'Datos © colaboradores de OpenStreetMap',
+            'search-error': 'Error al buscar tiendas',
+            'go-to-profile': 'Ir al Perfil',
+            'getting-location': 'Obteniendo ubicación...',
+            'location-obtained': 'Ubicación obtenida',
+            'location-not-supported': 'Geolocalización no soportada',
+            'location-permission-denied': 'Permiso denegado',
+            'location-timeout': 'Tiempo de espera agotado',
+            'location-error': 'Error al obtener la ubicación',
+            'geocoding': 'Buscando coordenadas...',
+            'address-not-found': 'Dirección no encontrada',
+            'work-address-not-set': 'Configura primero tu dirección de trabajo en el perfil',
+            'searching-near': 'Buscando tiendas cerca de:',
+            'set-address-message': 'Configura tu dirección en el perfil para encontrar tiendas',
+            'address-not-available': 'Dirección no disponible',
+            'store': 'Tienda',
+            'supermarket': 'Supermercado',
+            'searching': 'Buscando...',
+            'km': 'km',
+            'm': 'm',
+            'supermarket': 'Supermercado',
+            'convenience': 'Tienda de conveniencia',
+            'grocery': 'Tienda de comestibles',
+            'greengrocer': 'Frutería',
+            'butcher': 'Carnicería',
+            'bakery': 'Panadería',
+            'chemist': 'Droguería',
+            'pharmacy': 'Farmacia',
+            'department_store': 'Grandes almacenes',
             'other': 'Otro',
         },
         'fr': {
@@ -7374,6 +7837,46 @@ function getTranslations(lang) {
             'price-auto-hint': 'Si vous ne saisissez pas de prix, le meilleur prix disponible sera utilisé',
             'confirm': 'Confirmer',
             'add-product-title': 'Ajouter {product}',
+            'search-location': 'Chercher des magasins près de:',
+            'home': 'Domicile',
+            'work': 'Travail',
+            'current-location': 'Position actuelle',
+            'searching-near': 'Recherche de magasins près de:',
+            'set-address-message': 'Configurez votre adresse dans le profil pour trouver des magasins',
+            'find-nearby-stores': 'Trouver des Magasins Proches',
+            'searching': 'Recherche en cours...',
+            'searching-nearby': 'Recherche de magasins à proximité...',
+            'no-stores-found': 'Aucun magasin trouvé dans un rayon de',
+            'address-not-available': 'Adresse non disponible',
+            'osm-credit': 'Données © contributeurs OpenStreetMap',
+            'search-error': 'Erreur lors de la recherche de magasins',
+            'go-to-profile': 'Aller au Profil',
+            'getting-location': 'Obtention de la position...',
+            'location-obtained': 'Position obtenue',
+            'location-not-supported': 'Géolocalisation non supportée',
+            'location-permission-denied': 'Permission refusée',
+            'location-timeout': 'Délai d\'attente dépassé',
+            'location-error': 'Erreur lors de l\'obtention de la position',
+            'geocoding': 'Recherche de coordonnées...',
+            'address-not-found': 'Adresse non trouvée',
+            'work-address-not-set': 'Configurez d\'abord votre adresse professionnelle dans le profil',
+            'searching-near': 'Recherche de magasins près de:',
+            'set-address-message': 'Configurez votre adresse dans le profil pour trouver des magasins',
+            'address-not-available': 'Adresse non disponible',
+            'store': 'Magasin',
+            'supermarket': 'Supermarché',
+            'searching': 'Recherche en cours...',
+            'km': 'km',
+            'm': 'm',
+            'supermarket': 'Supermarché',
+            'convenience': 'Épicerie',
+            'grocery': 'Épicerie fine',
+            'greengrocer': 'Primeur',
+            'butcher': 'Boucherie',
+            'bakery': 'Boulangerie',
+            'chemist': 'Droguerie',
+            'pharmacy': 'Pharmacie',
+            'department_store': 'Grand magasin',
             'other': 'Autre',
         },
         'de': {
@@ -7490,6 +7993,46 @@ function getTranslations(lang) {
             'price-auto-hint': 'Wenn Sie kein Preis eingeben, wird der beste verfügbare Preis verwendet',
             'confirm': 'Bestätigen',
             'add-product-title': '{product} hinzufügen',
+            'search-location': 'Geschäfte suchen in der Nähe von:',
+            'home': 'Zuhause',
+            'work': 'Arbeit',
+            'current-location': 'Aktueller Standort',
+            'searching-near': 'Suche Geschäfte in der Nähe von:',
+            'set-address-message': 'Legen Sie Ihre Adresse im Profil fest, um Geschäfte zu finden',
+            'find-nearby-stores': 'Geschäfte in der Nähe finden',
+            'searching': 'Suche läuft...',
+            'searching-nearby': 'Suche nach Geschäften in der Nähe...',
+            'no-stores-found': 'Keine Geschäfte gefunden im Umkreis von',
+            'address-not-available': 'Adresse nicht verfügbar',
+            'osm-credit': 'Daten © OpenStreetMap-Mitwirkende',
+            'search-error': 'Fehler bei der Suche nach Geschäften',
+            'go-to-profile': 'Zum Profil',
+            'getting-location': 'Standort wird ermittelt...',
+            'location-obtained': 'Standort ermittelt',
+            'location-not-supported': 'Geolokalisierung nicht unterstützt',
+            'location-permission-denied': 'Zugriff verweigert',
+            'location-timeout': 'Zeitüberschreitung',
+            'location-error': 'Fehler beim Ermitteln des Standorts',
+            'geocoding': 'Suche Koordinaten...',
+            'address-not-found': 'Adresse nicht gefunden',
+            'work-address-not-set': 'Legen Sie zuerst Ihre Arbeitsadresse im Profil fest',
+            'searching-near': 'Suche Geschäfte in der Nähe von:',
+            'set-address-message': 'Legen Sie Ihre Adresse im Profil fest, um Geschäfte zu finden',
+            'address-not-available': 'Adresse nicht verfügbar',
+            'store': 'Geschäft',
+            'supermarket': 'Supermarkt',
+            'searching': 'Suche läuft...',
+            'km': 'km',
+            'm': 'm',
+            'supermarket': 'Supermarkt',
+            'convenience': 'Tante-Emma-Laden',
+            'grocery': 'Lebensmittelgeschäft',
+            'greengrocer': 'Obst- und Gemüsehändler',
+            'butcher': 'Metzgerei',
+            'bakery': 'Bäckerei',
+            'chemist': 'Drogerie',
+            'pharmacy': 'Apotheke',
+            'department_store': 'Kaufhaus',
             'other': 'Sonstiges',
         },
         'ro': {
@@ -7606,6 +8149,46 @@ function getTranslations(lang) {
             'price-auto-hint': 'Dacă nu introduci un preț, va fi folosit cel mai bun preț disponibil',
             'confirm': 'Confirmă',
             'add-product-title': 'Adaugă {product}',
+            'search-location': 'Caută magazine lângă:',
+            'home': 'Acasă',
+            'work': 'Serviciu',
+            'current-location': 'Locația curentă',
+            'searching-near': 'Caut magazine lângă:',
+            'set-address-message': 'Setează adresa în profil pentru a găsi magazine',
+            'find-nearby-stores': 'Găsește magazine apropiate',
+            'searching': 'Căutare în curs...',
+            'searching-nearby': 'Caut magazine în apropiere...',
+            'no-stores-found': 'Niciun magazin găsit pe o rază de',
+            'address-not-available': 'Adresă indisponibilă',
+            'osm-credit': 'Date © contribuitori OpenStreetMap',
+            'search-error': 'Eroare la căutarea magazinelor',
+            'go-to-profile': 'Mergi la Profil',
+            'getting-location': 'Obțin locația...',
+            'location-obtained': 'Locație obținută',
+            'location-not-supported': 'Geolocația nu este suportată',
+            'location-permission-denied': 'Permisiune refuzată',
+            'location-timeout': 'Timeout',
+            'location-error': 'Eroare la obținerea locației',
+            'geocoding': 'Caut coordonate...',
+            'address-not-found': 'Adresă negăsită',
+            'work-address-not-set': 'Setează mai întâi adresa de serviciu în profil',
+            'searching-near': 'Caut magazine lângă:',
+            'set-address-message': 'Setează adresa în profil pentru a găsi magazine',
+            'address-not-available': 'Adresă indisponibilă',
+            'store': 'Magazin',
+            'supermarket': 'Supermarket',
+            'searching': 'Căutare în curs...',
+            'km': 'km',
+            'm': 'm',
+            'supermarket': 'Supermarket',
+            'convenience': 'Alimentari',
+            'grocery': 'Drogherie',
+            'greengrocer': 'Fruct & Legume',
+            'butcher': 'Măcelărie',
+            'bakery': 'Brutărie',
+            'chemist': 'Drogherie',
+            'pharmacy': 'Farmacie',
+            'department_store': 'Magazin universal',
             'other': 'Altele',
         }
     };
