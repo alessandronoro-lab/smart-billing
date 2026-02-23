@@ -2,11 +2,12 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Smart Billing App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+    
         /* Animazioni */
         .fade-in { animation: fadeIn 0.3s ease-in; }
         .slide-in { animation: slideIn 0.3s ease-out; }
@@ -447,251 +448,298 @@
             </div>
         </div>
         
-        <!-- ==================== SCREEN 5: LISTA SPESA ==================== -->
-        <div id="screen-shopping" class="screen">
-            <div class="mb-6">
-                <button onclick="showScreen('dashboard')" 
-                        class="flex items-center gap-2 text-gray-600 hover:text-gray-800">
-                    <i class="fas fa-arrow-left"></i> Torna alla Dashboard
-                </button>
-            </div>
-            
-            <div class="bg-white rounded-xl shadow p-6 mb-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-2">
-                    <i class="fas fa-shopping-basket text-green-500 mr-2"></i>Lista della Spesa
-                </h2>
-                
-                <div class="flex gap-2 mb-6">
-                    <input type="text" id="shopping-item" 
-                           class="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                           placeholder="Cosa devi comprare?" 
-                           onkeypress="if(event.key === 'Enter') addShoppingItem()">
-                    <button onclick="addShoppingItem()" 
-                            class="px-5 btn-income text-white rounded-lg font-semibold">
-                        <i class="fas fa-plus"></i>
+                <!-- ==================== SCREEN 5: LISTA SPESA ==================== -->
+                <div id="screen-shopping" class="screen">
+                <div class="mb-6">
+                    <button onclick="showScreen('dashboard')" 
+                            class="flex items-center gap-2 text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left"></i> Torna alla Dashboard
                     </button>
                 </div>
                 
-                <div id="shopping-list-items" class="space-y-3">
-                    <!-- Filled by JavaScript -->
-                </div>
-                
-                <!-- Optimization Options -->
-                <div id="optimization-section" class="mt-8 pt-6 border-t">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                        <i class="fas fa-chart-line text-purple-500 mr-2"></i>Ottimizza Acquisti
-                    </h3>
+                <div class="bg-white rounded-xl shadow p-6 mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-2">
+                        <i class="fas fa-shopping-basket text-green-500 mr-2"></i>Lista della Spesa
+                    </h2>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <button onclick="optimizeLowestPrice()" 
-                    class="optimization-card border-green-300 bg-green-50 p-4 text-center">
-                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <i class="fas fa-euro-sign text-green-600"></i>
-                </div>
-                <p class="font-bold text-gray-800 mb-1" data-translate="lowest-price">Prezzo più basso</p>
-                <p class="text-sm text-gray-600" data-translate="min-total">Spesa minima totale</p>
-                <p class="text-xs text-green-600 mt-2" id="lowest-price-total">€0,00 / 0 negozi</p>
-            </button>
-                        
-            <button onclick="optimizeFewestStores()" 
-            class="optimization-card border-blue-300 bg-blue-50 p-4 text-center">
-        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <i class="fas fa-store text-blue-600"></i>
-        </div>
-        <p class="font-bold text-gray-800 mb-1" data-translate="fewest-stores">Meno negozi</p>
-        <p class="text-sm text-gray-600" data-translate="fewer-stores">Visita meno punti vendita</p>
-        <p class="text-xs text-blue-600 mt-2" id="fewest-stores-count">€0,00 / 0 negozi</p>
-    </button>
-                        
-    <button onclick="optimizeBalanced()" 
-    class="optimization-card border-purple-300 bg-purple-50 p-4 text-center">
-<div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-    <i class="fas fa-balance-scale text-purple-600"></i>
-</div>
-<p class="font-bold text-gray-800 mb-1" data-translate="optimized">Ottimizzato</p>
-<p class="text-sm text-gray-600" data-translate="price-stores-balanced">Prezzo e negozi bilanciati</p>
-<p class="text-xs text-purple-600 mt-2" id="balanced-optimization">€0,00 / 0 negozi</p>
-</button>
+                    <div class="flex gap-2 mb-6">
+                        <input type="text" id="shopping-item" 
+                               class="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                               placeholder="Cosa devi comprare?" 
+                               onkeypress="if(event.key === 'Enter') addShoppingItem()">
+                        <button onclick="addShoppingItem()" 
+                                class="px-5 btn-income text-white rounded-lg font-semibold">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+    
+                    <!-- 🔥 BOTTONE REGISTRA ACQUISTI -->
+                    <div class="mb-4">
+                        <button onclick="showRegisterPurchases()" 
+                                class="w-full py-3 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center gap-2">
+                            <i class="fas fa-camera mr-2"></i> Registra acquisti spuntati
+                        </button>
                     </div>
                     
-                    <!-- Optimization Results -->
-                    <div id="optimization-results" class="hidden">
-                        <div class="p-4 bg-gray-50 rounded-lg">
-                            <div class="flex justify-between items-center mb-3">
-                                <h4 class="font-semibold text-gray-800" id="optimization-title">Risultato Ottimizzazione</h4>
-                                <button onclick="closeOptimizationResults()" class="text-gray-500 hover:text-gray-700">
-                                    <i class="fas fa-times"></i>
+                    <div id="shopping-list-items" class="space-y-3">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                    
+                    <!-- Optimization Options -->
+                    <div id="optimization-section" class="mt-8 pt-6 border-t">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-chart-line text-purple-500 mr-2"></i>Ottimizza Acquisti
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <button onclick="optimizeLowestPrice()" 
+                                    class="optimization-card border-green-300 bg-green-50 p-4 text-center">
+                                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-euro-sign text-green-600"></i>
+                                </div>
+                                <p class="font-bold text-gray-800 mb-1" data-translate="lowest-price">Prezzo più basso</p>
+                                <p class="text-sm text-gray-600" data-translate="min-total">Spesa minima totale</p>
+                                <p class="text-xs text-green-600 mt-2" id="lowest-price-total">€0,00 / 0 negozi</p>
+                            </button>
+                            
+                            <button onclick="optimizeFewestStores()" 
+                                    class="optimization-card border-blue-300 bg-blue-50 p-4 text-center">
+                                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-store text-blue-600"></i>
+                                </div>
+                                <p class="font-bold text-gray-800 mb-1" data-translate="fewest-stores">Meno negozi</p>
+                                <p class="text-sm text-gray-600" data-translate="fewer-stores">Visita meno punti vendita</p>
+                                <p class="text-xs text-blue-600 mt-2" id="fewest-stores-count">€0,00 / 0 negozi</p>
+                            </button>
+                            
+                            <button onclick="optimizeBalanced()" 
+                                    class="optimization-card border-purple-300 bg-purple-50 p-4 text-center">
+                                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <i class="fas fa-balance-scale text-purple-600"></i>
+                                </div>
+                                <p class="font-bold text-gray-800 mb-1" data-translate="optimized">Ottimizzato</p>
+                                <p class="text-sm text-gray-600" data-translate="price-stores-balanced">Prezzo e negozi bilanciati</p>
+                                <p class="text-xs text-purple-600 mt-2" id="balanced-optimization">€0,00 / 0 negozi</p>
+                            </button>
+                        </div>
+                        
+                        <!-- Optimization Results -->
+                        <div id="optimization-results" class="hidden">
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h4 class="font-semibold text-gray-800" id="optimization-title">Risultato Ottimizzazione</h4>
+                                    <button onclick="closeOptimizationResults()" class="text-gray-500 hover:text-gray-700">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div class="text-center p-3 bg-white rounded-lg">
+                                        <p class="text-sm text-gray-500">Prezzo Totale</p>
+                                        <p class="text-xl font-bold text-green-600" id="opt-total-price">€0,00</p>
+                                    </div>
+                                    <div class="text-center p-3 bg-white rounded-lg">
+                                        <p class="text-sm text-gray-500">Negozi</p>
+                                        <p class="text-xl font-bold text-blue-600" id="opt-store-count">0</p>
+                                    </div>
+                                </div>
+                                <div id="optimization-details" class="space-y-3">
+                                    <!-- Filled dynamically -->
+                                </div>
+                                <button onclick="applyOptimization()" 
+                                        class="w-full mt-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600"
+                                        data-translate="apply-solution">
+                                    <i class="fas fa-check mr-2"></i>Applica questa soluzione
                                 </button>
                             </div>
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div class="text-center p-3 bg-white rounded-lg">
-                                    <p class="text-sm text-gray-500">Prezzo Totale</p>
-                                    <p class="text-xl font-bold text-green-600" id="opt-total-price">€0,00</p>
-                                </div>
-                                <div class="text-center p-3 bg-white rounded-lg">
-                                    <p class="text-sm text-gray-500">Negozi</p>
-                                    <p class="text-xl font-bold text-blue-600" id="opt-store-count">0</p>
-                                </div>
-                            </div>
-                            <div id="optimization-details" class="space-y-3">
-                                <!-- Filled dynamically -->
-                            </div>
-                            <button onclick="applyOptimization()" 
-        class="w-full mt-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600"
-        data-translate="apply-solution">
-    <i class="fas fa-check mr-2"></i>Applica questa soluzione
-</button>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <!-- Nearby Stores -->
+                </div> <!-- CHIUDE IL DIV PRINCIPALE (bg-white) -->
+                
+                <!-- Nearby Stores -->
+                <div class="bg-white rounded-xl shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-store text-blue-500 mr-2"></i>
+                        <span id="nearby-stores-title">Negozi Vicini</span>
+                    </h2>
+    
+                    <!-- Selettore posizione -->
+                    <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                        <p class="text-sm font-medium text-gray-700 mb-3" id="search-location-text">Cerca negozi vicino a:</p>
+                        <div class="flex flex-wrap gap-2">
+                            <button id="location-home-btn" onclick="setLocation('home')" 
+                                    class="flex-1 py-2 px-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center justify-center gap-2">
+                                <i class="fas fa-home"></i> <span id="home-text">Casa</span>
+                            </button>
+                            <button id="location-work-btn" onclick="setLocation('work')" 
+                                    class="flex-1 py-2 px-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 flex items-center justify-center gap-2">
+                                <i class="fas fa-briefcase"></i> <span id="work-text">Lavoro</span>
+                            </button>
+                            <button id="location-current-btn" onclick="setLocation('current')" 
+                                    class="flex-1 py-2 px-3 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center justify-center gap-2">
+                                <i class="fas fa-location-dot"></i> <span id="current-location-text-btn">Posizione attuale</span>
+                            </button>
+                        </div>
+                        <div id="selected-location-display" class="mt-2 text-sm text-gray-600">
+                            <i class="fas fa-map-pin mr-1"></i> <span id="searching-near-text">Cerco negozi vicino a:</span> 
+                            <span id="current-location-text" class="font-semibold">Casa</span>
+                        </div>
+                    </div>
+    
+                    <div id="nearby-stores" class="space-y-3">
+                        <p class="text-gray-500 text-center py-4" id="set-address-message-text">
+                            Imposta il tuo indirizzo nel profilo per trovare negozi
+                        </p>
+                    </div>
+    
+                    <button id="search-stores-btn" onclick="findNearbyStores()" 
+                            class="w-full mt-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-2">
+                        <i class="fas fa-search mr-2"></i><span id="find-nearby-stores-text">Cerca Negozi Vicini</span>
+                    </button>
+                </div> <!-- CHIUDE IL BLOCCO NEGOZI -->
+    
+                <!-- SCRIPT PER FORZARE LE TRADUZIONI -->
+                <script>
+                (function() {
+                    function translateNearbyStores() {
+                        try {
+                            const profile = JSON.parse(localStorage.getItem('smart_billing_profile_v2') || '{}');
+                            const lang = profile.language || 'it';
+                            
+                            const translations = {
+                                'it': {
+                                    'nearby-stores': 'Negozi Vicini',
+                                    'search-location': 'Cerca negozi vicino a:',
+                                    'home': 'Casa',
+                                    'work': 'Lavoro',
+                                    'current-location': 'Posizione attuale',
+                                    'searching-near': 'Cerco negozi vicino a:',
+                                    'set-address-message': 'Imposta il tuo indirizzo nel profilo per trovare negozi',
+                                    'find-nearby-stores': 'Cerca Negozi Vicini'
+                                },
+                                'en': {
+                                    'nearby-stores': 'Nearby Stores',
+                                    'search-location': 'Search stores near:',
+                                    'home': 'Home',
+                                    'work': 'Work',
+                                    'current-location': 'Current location',
+                                    'searching-near': 'Searching stores near:',
+                                    'set-address-message': 'Set your address in the profile to find stores',
+                                    'find-nearby-stores': 'Find Nearby Stores'
+                                },
+                                'es': {
+                                    'nearby-stores': 'Tiendas Cercanas',
+                                    'search-location': 'Buscar tiendas cerca de:',
+                                    'home': 'Casa',
+                                    'work': 'Trabajo',
+                                    'current-location': 'Ubicación actual',
+                                    'searching-near': 'Buscando tiendas cerca de:',
+                                    'set-address-message': 'Configura tu dirección en el perfil para encontrar tiendas',
+                                    'find-nearby-stores': 'Buscar Tiendas Cercanas'
+                                },
+                                'fr': {
+                                    'nearby-stores': 'Magasins Proches',
+                                    'search-location': 'Chercher des magasins près de:',
+                                    'home': 'Domicile',
+                                    'work': 'Travail',
+                                    'current-location': 'Position actuelle',
+                                    'searching-near': 'Recherche de magasins près de:',
+                                    'set-address-message': 'Configurez votre adresse dans le profil pour trouver des magasins',
+                                    'find-nearby-stores': 'Trouver des Magasins Proches'
+                                },
+                                'de': {
+                                    'nearby-stores': 'Geschäfte in der Nähe',
+                                    'search-location': 'Geschäfte suchen in der Nähe von:',
+                                    'home': 'Zuhause',
+                                    'work': 'Arbeit',
+                                    'current-location': 'Aktueller Standort',
+                                    'searching-near': 'Suche Geschäfte in der Nähe von:',
+                                    'set-address-message': 'Legen Sie Ihre Adresse im Profil fest, um Geschäfte zu finden',
+                                    'find-nearby-stores': 'Geschäfte in der Nähe finden'
+                                },
+                                'ro': {
+                                    'nearby-stores': 'Magazine Apropiate',
+                                    'search-location': 'Caută magazine lângă:',
+                                    'home': 'Acasă',
+                                    'work': 'Serviciu',
+                                    'current-location': 'Locația curentă',
+                                    'searching-near': 'Caut magazine lângă:',
+                                    'set-address-message': 'Setează adresa în profil pentru a găsi magazine',
+                                    'find-nearby-stores': 'Găsește Magazine Apropiate'
+                                }
+                            };
+                            
+                            const t = translations[lang] || translations['it'];
+                            
+                            document.getElementById('nearby-stores-title').textContent = t['nearby-stores'];
+                            document.getElementById('search-location-text').textContent = t['search-location'];
+                            document.getElementById('home-text').textContent = t['home'];
+                            document.getElementById('work-text').textContent = t['work'];
+                            document.getElementById('current-location-text-btn').textContent = t['current-location'];
+                            document.getElementById('searching-near-text').textContent = t['searching-near'];
+                            document.getElementById('set-address-message-text').textContent = t['set-address-message'];
+                            document.getElementById('find-nearby-stores-text').textContent = t['find-nearby-stores'];
+                            
+                            console.log('🌐 Schermata negozi tradotta in:', lang);
+                        } catch (e) {
+                            console.log('Errore traduzione negozi:', e);
+                        }
+                    }
+    
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', translateNearbyStores);
+                    } else {
+                        translateNearbyStores();
+                    }
+                })();
+                </script>
+    
+            </div> <!-- CHIUDE screen-shopping -->
+    
+            <!-- ==================== SCREEN 10: REGISTRA ACQUISTI ==================== -->
+<div id="screen-register-purchases" class="screen">
+<div class="mb-6">
+    <button onclick="showScreen('shopping')" 
+            class="flex items-center gap-2 text-gray-600 hover:text-gray-800">
+        <i class="fas fa-arrow-left"></i> Torna alla Lista
+    </button>
+</div>
+
 <div class="bg-white rounded-xl shadow p-6">
-<h2 class="text-lg font-semibold text-gray-800 mb-4">
-    <i class="fas fa-store text-blue-500 mr-2"></i>
-    <span id="nearby-stores-title">Negozi Vicini</span>
-</h2>
-
-<!-- Selettore posizione -->
-<div class="mb-4 p-4 bg-gray-50 rounded-lg">
-    <p class="text-sm font-medium text-gray-700 mb-3" id="search-location-text">Cerca negozi vicino a:</p>
-    <div class="flex flex-wrap gap-2">
-        <button id="location-home-btn" onclick="setLocation('home')" 
-                class="flex-1 py-2 px-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center justify-center gap-2">
-            <i class="fas fa-home"></i> <span id="home-text">Casa</span>
+    <h2 class="text-xl font-bold text-gray-800 mb-2">
+        <i class="fas fa-receipt text-green-500 mr-2"></i>Registra Acquisti
+    </h2>
+    <p class="text-gray-500 mb-6">Modifica prezzi e conferma gli acquisti</p>
+    
+    <!-- 🔥 NUOVO BOTTONE SCANSIONE SCONTRINO -->
+    <div class="mb-6">
+        <button onclick="scanReceipt()" 
+                class="w-full py-4 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-3 text-lg">
+            <i class="fas fa-camera fa-lg"></i> 
+            <span>Scansiona scontrino con fotocamera</span>
         </button>
-        <button id="location-work-btn" onclick="setLocation('work')" 
-                class="flex-1 py-2 px-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 flex items-center justify-center gap-2">
-            <i class="fas fa-briefcase"></i> <span id="work-text">Lavoro</span>
+        <p class="text-xs text-gray-500 text-center mt-2">
+            Usa la fotocamera per leggere automaticamente prezzi e prodotti
+        </p>
+    </div>
+    
+    <div id="purchases-to-register" class="space-y-4 mb-6">
+        <!-- Verrà popolato con gli articoli spuntati -->
+    </div>
+    
+    <div class="flex gap-3 pt-4">
+        <button onclick="registerAllPurchases()" 
+                class="flex-1 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600">
+            <i class="fas fa-check mr-2"></i> Conferma Acquisti
         </button>
-        <button id="location-current-btn" onclick="setLocation('current')" 
-                class="flex-1 py-2 px-3 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center justify-center gap-2">
-            <i class="fas fa-location-dot"></i> <span id="current-location-text-btn">Posizione attuale</span>
+        <button onclick="showScreen('shopping')" 
+                class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300">
+            Annulla
         </button>
     </div>
-    <div id="selected-location-display" class="mt-2 text-sm text-gray-600">
-        <i class="fas fa-map-pin mr-1"></i> <span id="searching-near-text">Cerco negozi vicino a:</span> 
-        <span id="current-location-text" class="font-semibold">Casa</span>
-    </div>
 </div>
-
-<div id="nearby-stores" class="space-y-3">
-    <p class="text-gray-500 text-center py-4" id="set-address-message-text">
-        Imposta il tuo indirizzo nel profilo per trovare negozi
-    </p>
 </div>
-
-<button id="search-stores-btn" onclick="findNearbyStores()" 
-        class="w-full mt-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-2">
-    <i class="fas fa-search mr-2"></i><span id="find-nearby-stores-text">Cerca Negozi Vicini</span>
-</button>
-</div> <!-- CHIUDE IL BLOCCO NEGOZI -->
-
-<!-- SCRIPT PER FORZARE LE TRADUZIONI -->
-<script>
-(function() {
-// Funzione per tradurre la schermata negozi
-function translateNearbyStores() {
-    try {
-        // Leggi la lingua dal localStorage
-        const profile = JSON.parse(localStorage.getItem('smart_billing_profile_v2') || '{}');
-        const lang = profile.language || 'it';
-        
-        // Dizionario traduzioni per la schermata negozi
-        const translations = {
-            'it': {
-                'nearby-stores': 'Negozi Vicini',
-                'search-location': 'Cerca negozi vicino a:',
-                'home': 'Casa',
-                'work': 'Lavoro',
-                'current-location': 'Posizione attuale',
-                'searching-near': 'Cerco negozi vicino a:',
-                'set-address-message': 'Imposta il tuo indirizzo nel profilo per trovare negozi',
-                'find-nearby-stores': 'Cerca Negozi Vicini'
-            },
-            'en': {
-                'nearby-stores': 'Nearby Stores',
-                'search-location': 'Search stores near:',
-                'home': 'Home',
-                'work': 'Work',
-                'current-location': 'Current location',
-                'searching-near': 'Searching stores near:',
-                'set-address-message': 'Set your address in the profile to find stores',
-                'find-nearby-stores': 'Find Nearby Stores'
-            },
-            'es': {
-                'nearby-stores': 'Tiendas Cercanas',
-                'search-location': 'Buscar tiendas cerca de:',
-                'home': 'Casa',
-                'work': 'Trabajo',
-                'current-location': 'Ubicación actual',
-                'searching-near': 'Buscando tiendas cerca de:',
-                'set-address-message': 'Configura tu dirección en el perfil para encontrar tiendas',
-                'find-nearby-stores': 'Buscar Tiendas Cercanas'
-            },
-            'fr': {
-                'nearby-stores': 'Magasins Proches',
-                'search-location': 'Chercher des magasins près de:',
-                'home': 'Domicile',
-                'work': 'Travail',
-                'current-location': 'Position actuelle',
-                'searching-near': 'Recherche de magasins près de:',
-                'set-address-message': 'Configurez votre adresse dans le profil pour trouver des magasins',
-                'find-nearby-stores': 'Trouver des Magasins Proches'
-            },
-            'de': {
-                'nearby-stores': 'Geschäfte in der Nähe',
-                'search-location': 'Geschäfte suchen in der Nähe von:',
-                'home': 'Zuhause',
-                'work': 'Arbeit',
-                'current-location': 'Aktueller Standort',
-                'searching-near': 'Suche Geschäfte in der Nähe von:',
-                'set-address-message': 'Legen Sie Ihre Adresse im Profil fest, um Geschäfte zu finden',
-                'find-nearby-stores': 'Geschäfte in der Nähe finden'
-            },
-            'ro': {
-                'nearby-stores': 'Magazine Apropiate',
-                'search-location': 'Caută magazine lângă:',
-                'home': 'Acasă',
-                'work': 'Serviciu',
-                'current-location': 'Locația curentă',
-                'searching-near': 'Caut magazine lângă:',
-                'set-address-message': 'Setează adresa în profil pentru a găsi magazine',
-                'find-nearby-stores': 'Găsește Magazine Apropiate'
-            }
-        };
-        
-        const t = translations[lang] || translations['it'];
-        
-        // Applica le traduzioni
-        document.getElementById('nearby-stores-title').textContent = t['nearby-stores'];
-        document.getElementById('search-location-text').textContent = t['search-location'];
-        document.getElementById('home-text').textContent = t['home'];
-        document.getElementById('work-text').textContent = t['work'];
-        document.getElementById('current-location-text-btn').textContent = t['current-location'];
-        document.getElementById('searching-near-text').textContent = t['searching-near'];
-        document.getElementById('set-address-message-text').textContent = t['set-address-message'];
-        document.getElementById('find-nearby-stores-text').textContent = t['find-nearby-stores'];
-        
-        console.log('🌐 Schermata negozi tradotta in:', lang);
-    } catch (e) {
-        console.log('Errore traduzione negozi:', e);
-    }
-}
-
-// Esegui quando la pagina è caricata
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', translateNearbyStores);
-} else {
-    translateNearbyStores();
-}
-})();
-</script>
-
-</div> <!-- CHIUDE screen-shopping -->
-        
-        <!-- ==================== SCREEN 6: GESTIONE BUDGET ==================== -->
+            
+            <!-- ==================== SCREEN 6: GESTIONE BUDGET ==================== -->
         <div id="screen-budget" class="screen">
             <div class="mb-6">
                 <button onclick="showScreen('dashboard')" 
@@ -1341,64 +1389,7 @@ window.updateStoresFromOSM = function(shops) {
     localStorage.setItem('storesDatabase', JSON.stringify(window.storesDatabase));
     console.log(`🏪 Salvati ${window.storesDatabase.length} negozi da OSM`);
 };
-// ==================== NUOVA FUNZIONE PER CONFERMA CON NEGOZIO ====================
-window.confirmQuantityWithStore = function(itemName) {
-    const storeSelect = document.getElementById('modal-store-select');
-    const selectedStore = storeSelect.value;
-    
-    if (!selectedStore) {
-        showToast('⚠️ Seleziona un negozio');
-        return;
-    }
-    
-    // Se ha scelto un prezzo, prendilo
-    const priceInput = document.getElementById('modal-price');
-    const customPrice = priceInput ? parseFloat(priceInput.value) : null;
-    
-    if (selectedStore === '__new__') {
-        closeQuantityModal();
-        // Passa anche il prezzo se inserito
-        showNewStoreModalWithProduct(itemName, window.currentQuantity, customPrice);
-        return;
-    }
-    
-    closeQuantityModal();
-    
-    // Se ha inserito un prezzo personalizzato, usalo direttamente
-    if (customPrice && customPrice > 0) {
-        // Salva il prezzo per questo negozio
-        saveUserPrice(itemName, selectedStore, customPrice, {
-            source: 'manual',
-            confidence: 1.0
-        });
-        
-        // Aggiungi il prodotto con quel prezzo
-        shoppingList.push({
-            id: Date.now(),
-            name: itemName,
-            quantity: window.currentQuantity,
-            checked: false,
-            bestPrice: customPrice,
-            bestStore: selectedStore,
-            selectedStore: selectedStore,
-            prices: [{
-                price: customPrice,
-                store: selectedStore,
-                source: 'user',
-                confidence: 1.0
-            }],
-            recognized: true,
-            source: 'user',
-            confidence: 1.0
-        });
-        
-        renderShoppingList();
-        showToast(`✅ ${itemName} x${window.currentQuantity} aggiunto - ${formatCurrency(customPrice * window.currentQuantity)} @ ${selectedStore}`);
-    } else {
-        // Altrimenti usa il prezzo automatico
-        addShoppingItemInternal(itemName, window.currentQuantity, selectedStore);
-    }
-};
+
 // ==================== FUNZIONI AGGIUNTIVE PER GESTIONE NEGOZI ====================
 
 // Funzione per mostrare il modal di aggiunta nuovo negozio
@@ -1457,7 +1448,7 @@ function showNewStoreModal(itemId, prefillName = '', prefillPrice = null) {
     
     document.body.appendChild(modal);
 }
-function showNewStoreModalWithProduct(itemName, quantity = 1) {
+function showNewStoreModalWithProduct(itemName, quantity = 1, prefillPrice = null) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
     modal.innerHTML = `
@@ -1483,6 +1474,7 @@ function showNewStoreModalWithProduct(itemName, quantity = 1) {
                     <label class="block text-sm font-medium mb-2">Prezzo per ${itemName} (${userProfile?.currencySymbol || '€'})</label>
                     <input type="number" step="0.01" id="new-store-price" 
                            class="w-full p-3 border rounded-lg" 
+                           value="${prefillPrice || ''}"
                            placeholder="0.00">
                 </div>
                 
@@ -3041,7 +3033,8 @@ async function addAsIs(productName) {
     });
     
     document.getElementById('shopping-item').value = '';
-    
+    // 🔥 AGGIUNTO: salva i dati
+    saveAllData();
     renderShoppingList();
     
     const confidenceIcon = bestPrice.confidence > 0.8 ? '✅' : '⚠️';
@@ -4515,6 +4508,8 @@ window.submitPriceCorrectionWithStore = function(itemId) {
     showQuantityModal(itemName);
 }
 
+
+
 // ==================== FUNZIONE PER RIMUOVERE PRODOTTO ====================
 function removeShoppingItem(id) {
     shoppingList = shoppingList.filter(item => item.id !== id);
@@ -4532,29 +4527,7 @@ function toggleShoppingItem(id) {
     const item = shoppingList.find(i => i.id === id);
     if (item) {
         item.checked = !item.checked;
-        
-        if (item.checked && item.bestPrice) {
-            // Usa il negozio selezionato o quello del prezzo
-            const storeName = item.selectedStore || item.bestStore || 'Negozio generico';
-            
-            transactions.push({
-                id: Date.now(),
-                amount: item.bestPrice * (item.quantity || 1),
-                description: `Spesa: ${item.name}${item.quantity > 1 ? ' x' + item.quantity : ''} (${storeName})`,
-                category: 'Alimentari',
-                type: 'uscita',
-                date: new Date().toISOString().split('T')[0],
-                product: item.name,
-                store: storeName
-            });
-            
-            // 🔥 SALVA I DATI DOPO AVER AGGIUNTO LA TRANSAZIONE
-            saveAllData();
-
-            showToast(`💰 ${item.name} aggiunto alle transazioni - ${formatCurrency(item.bestPrice * (item.quantity || 1))}`);
-            updateDashboard();
-        }
-        
+        saveAllData();
         renderShoppingList();
     }
 }
@@ -4580,6 +4553,7 @@ function showQuantityModal(itemName) {
         `<option value="${store.name}">${store.name}</option>`
     ).join('');
     
+    // 🔥 MODIFICATO: aggiunto onchange per gestire direttamente __new__
     modal.innerHTML = `
         <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
             <h3 class="text-xl font-bold mb-4">${t['add-product-title'].replace('{product}', itemName)}</h3>
@@ -4596,10 +4570,11 @@ function showQuantityModal(itemName) {
                 </div>
             </div>
 
-            <!-- Negozio -->
+            <!-- Negozio - CON ONCHANGE DIRETTO -->
             <div class="mb-4">
                 <label class="block text-sm font-medium mb-2">${t['store']}</label>
-                <select id="modal-store-select" class="w-full p-3 border rounded-lg" onchange="togglePriceField()">
+                <select id="modal-store-select" class="w-full p-3 border rounded-lg" 
+                        onchange="handleStoreSelectDirect(this, '${itemName}')">
                     <option value="">${t['select-store']}</option>
                     ${storeOptions}
                     <option value="__new__">${t['add-new-store']}</option>
@@ -4635,6 +4610,35 @@ function showQuantityModal(itemName) {
     window.currentQuantity = 1;
     window.currentItemName = itemName;
 }
+// ==================== GESTIONE DIRETTA NEGOZIO NUOVO ====================
+function handleStoreSelectDirect(select, itemName) {
+    if (select.value === '__new__') {
+        console.log('➕ Apertura diretta nuovo negozio per', itemName);
+        
+        // Prendi il prezzo se è stato inserito
+        const priceInput = document.getElementById('modal-price');
+        const customPrice = priceInput ? parseFloat(priceInput.value) : null;
+        const quantity = window.currentQuantity || 1;
+        
+        // Chiudi il modal quantità
+        closeQuantityModal();
+        
+        // Apri direttamente il modal nuovo negozio
+        showNewStoreModalWithProduct(itemName, quantity, customPrice);
+    } else if (select.value) {
+        // Se ha selezionato un negozio esistente, mostra il campo prezzo
+        const priceContainer = document.getElementById('price-field-container');
+        if (priceContainer) {
+            priceContainer.classList.remove('hidden');
+        }
+    } else {
+        // Se ha deselezionato, nascondi il campo prezzo
+        const priceContainer = document.getElementById('price-field-container');
+        if (priceContainer) {
+            priceContainer.classList.add('hidden');
+        }
+    }
+}
 // ==================== FUNZIONI PER MODAL QUANTITÀ ====================
 window.updateQuantity = function(change) {
     if (window.currentQuantity === undefined) window.currentQuantity = 1;
@@ -4652,6 +4656,8 @@ window.closeQuantityModal = function() {
 window.togglePriceField = function() {
     const select = document.getElementById('modal-store-select');
     const priceContainer = document.getElementById('price-field-container');
+    
+    // 🔥 SE È __new__, NON mostrare il campo prezzo (verrà gestito da handleStoreSelectDirect)
     if (select.value && select.value !== '__new__') {
         priceContainer.classList.remove('hidden');
     } else {
@@ -4766,7 +4772,331 @@ window.confirmQuantityWithStore = function(itemName) {
         return; // Evita doppio render
     }
 };
+// ==================== 🔥 QUI AGGIUNGI LE NUOVE FUNZIONI ====================
+function showRegisterPurchases() {
+    const checkedItems = shoppingList.filter(item => item.checked);
+    
+    if (checkedItems.length === 0) {
+        showToast('⚠️ Nessun articolo spuntato da registrare');
+        return;
+    }
+    
+    showScreen('register-purchases');
+    renderPurchasesToRegister();
+}
 
+function renderPurchasesToRegister() {
+    const container = document.getElementById('purchases-to-register');
+    const checkedItems = shoppingList.filter(item => item.checked);
+    
+    container.innerHTML = '';
+    
+    checkedItems.forEach(item => {
+        container.innerHTML += `
+            <div class="p-4 border rounded-lg" data-item-id="${item.id}">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="font-semibold">${item.name}</p>
+                        <p class="text-sm text-gray-500">Quantità: ${item.quantity || 1}</p>
+                    </div>
+                    <button onclick="removeFromPurchases(${item.id})" class="text-red-500">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="flex gap-2">
+                    <input type="number" step="0.01" id="price-${item.id}" 
+                           class="flex-1 p-2 border rounded" 
+                           value="${item.bestPrice || ''}" 
+                           placeholder="Prezzo">
+                    <input type="text" id="store-${item.id}" 
+                           class="flex-1 p-2 border rounded" 
+                           value="${item.bestStore || ''}" 
+                           placeholder="Negozio">
+                </div>
+            </div>
+        `;
+    });
+}
+
+function removeFromPurchases(itemId) {
+    const element = document.querySelector(`[data-item-id="${itemId}"]`);
+    if (element) {
+        element.remove();
+    }
+}
+
+function registerAllPurchases() {
+    const containers = document.querySelectorAll('[data-item-id]');
+    let registered = 0;
+    
+    containers.forEach(container => {
+        const itemId = parseInt(container.dataset.itemId);
+        const item = shoppingList.find(i => i.id === itemId);
+        
+        if (item) {
+            const newPrice = parseFloat(document.getElementById(`price-${itemId}`).value);
+            const newStore = document.getElementById(`store-${itemId}`).value.trim();
+            
+            // Se l'utente ha modificato prezzo o negozio, salva nel database
+            if (newPrice && newPrice > 0) {
+                saveUserPrice(item.name, newStore || item.bestStore || 'Negozio', newPrice, {
+                    source: 'purchase',
+                    confidence: 1.0
+                });
+                
+                // Aggiorna l'item con i nuovi valori
+                item.bestPrice = newPrice;
+                item.bestStore = newStore || item.bestStore;
+            }
+            
+            // Crea la transazione
+            transactions.push({
+                id: Date.now() + registered,
+                amount: (newPrice || item.bestPrice) * (item.quantity || 1),
+                description: `Spesa: ${item.name}${item.quantity > 1 ? ' x' + item.quantity : ''} (${newStore || item.bestStore || 'Negozio'})`,
+                category: 'Alimentari',
+                type: 'uscita',
+                date: new Date().toISOString().split('T')[0],
+                product: item.name,
+                store: newStore || item.bestStore || 'Negozio'
+            });
+            
+            // Rimuovi l'articolo dalla lista (o lascialo se vuoi)
+            shoppingList = shoppingList.filter(i => i.id !== itemId);
+            
+            registered++;
+        }
+    });
+    
+    if (registered > 0) {
+        saveAllData();
+        showToast(`✅ ${registered} acquisti registrati!`);
+        showScreen('shopping');
+        renderShoppingList();
+    }
+}
+// ==================== SCANSIONE SCONTRINO ====================
+function scanReceipt() {
+    // Verifica se la fotocamera è disponibile
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('📷 Fotocamera non supportata su questo dispositivo');
+        // Fallback: input file per caricare immagine
+        uploadReceiptImage();
+        return;
+    }
+    
+    // Controlla se ci sono articoli spuntati
+    const checkedItems = shoppingList.filter(item => item.checked);
+    if (checkedItems.length === 0) {
+        showToast('⚠️ Nessun articolo spuntato da registrare');
+        return;
+    }
+    
+    // Mostra modal per scegliere tra fotocamera o upload
+    showScanOptions();
+}
+
+// Mostra opzioni di scansione
+function showScanOptions() {
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <h3 class="text-xl font-bold mb-4">📷 Scansione scontrino</h3>
+            <p class="text-gray-600 mb-6">Scegli come acquisire lo scontrino:</p>
+            
+            <div class="space-y-3">
+                <button onclick="startCameraScan()" 
+                        class="w-full p-4 border-2 border-blue-300 rounded-xl text-left hover:border-blue-500 hover:bg-blue-50 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-camera text-blue-500 text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold">Usa fotocamera</p>
+                            <p class="text-sm text-gray-500">Scansiona in tempo reale</p>
+                        </div>
+                    </div>
+                </button>
+                
+                <button onclick="uploadReceiptImage()" 
+                        class="w-full p-4 border-2 border-green-300 rounded-xl text-left hover:border-green-500 hover:bg-green-50 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-cloud-upload-alt text-green-500 text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold">Carica immagine</p>
+                            <p class="text-sm text-gray-500">Seleziona uno scontrino già fotografato</p>
+                        </div>
+                    </div>
+                </button>
+                
+                <button onclick="closeModal()" 
+                        class="w-full p-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 mt-4">
+                    Annulla
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    window.currentModal = modal;
+}
+
+// Avvia la fotocamera
+async function startCameraScan() {
+    closeModal();
+    showToast('📷 Avvio fotocamera...');
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' } // Usa fotocamera posteriore
+        });
+        
+        // Crea modal con video
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-xl shadow-lg max-w-2xl w-full p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Inquadra lo scontrino</h3>
+                    <button onclick="stopCameraScan()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                <video id="camera-preview" autoplay playsinline class="w-full rounded-lg bg-black" style="max-height: 400px;"></video>
+                <div class="flex gap-3 mt-4">
+                    <button onclick="captureReceipt()" 
+                            class="flex-1 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600">
+                        <i class="fas fa-camera mr-2"></i> Acquisisci
+                    </button>
+                    <button onclick="stopCameraScan()" 
+                            class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300">
+                        Annulla
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        window.currentModal = modal;
+        window.cameraStream = stream;
+        
+        const video = document.getElementById('camera-preview');
+        video.srcObject = stream;
+        
+    } catch (error) {
+        console.error('Errore fotocamera:', error);
+        showToast('❌ Impossibile accedere alla fotocamera');
+        // Fallback a upload
+        uploadReceiptImage();
+    }
+}
+
+// Ferma la fotocamera
+function stopCameraScan() {
+    if (window.cameraStream) {
+        window.cameraStream.getTracks().forEach(track => track.stop());
+        window.cameraStream = null;
+    }
+    closeModal();
+}
+
+// Acquisisci immagine dalla fotocamera
+function captureReceipt() {
+    const video = document.getElementById('camera-preview');
+    if (!video) return;
+    
+    // Crea un canvas per catturare il frame
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Converti in data URL
+    const imageData = canvas.toDataURL('image/jpeg');
+    
+    // Ferma la fotocamera
+    stopCameraScan();
+    
+    // Processa l'immagine
+    processReceiptImage(imageData);
+}
+
+// Upload immagine da file
+function uploadReceiptImage() {
+    closeModal();
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            processReceiptImage(event.target.result);
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+}
+
+// Processa l'immagine dello scontrino (SIMULATO)
+function processReceiptImage(imageData) {
+    showToast('🔍 Analisi scontrino in corso...');
+    
+    // 🔥 QUI ANDREBBE L'INTEGRAZIONE CON UN SERVIZIO OCR
+    // Per ora simulo la lettura
+    
+    setTimeout(() => {
+        // Prendi gli articoli spuntati
+        const checkedItems = shoppingList.filter(item => item.checked);
+        
+        if (checkedItems.length === 0) {
+            showToast('⚠️ Nessun articolo da registrare');
+            return;
+        }
+        
+        // Simula la lettura dei prezzi (genera prezzi casuali)
+        checkedItems.forEach(item => {
+            // Prezzo simulato (tra 0.5 e 5 volte il prezzo originale)
+            const simulatedPrice = (item.bestPrice || 2) * (0.8 + Math.random() * 0.7);
+            const roundedPrice = Math.round(simulatedPrice * 100) / 100;
+            
+            // Aggiorna l'item nel DOM se presente
+            const priceInput = document.getElementById(`price-${item.id}`);
+            if (priceInput) {
+                priceInput.value = roundedPrice;
+                priceInput.style.borderColor = '#10b981';
+                priceInput.style.backgroundColor = '#f0fdf4';
+            }
+        });
+        
+        showToast('✅ Scontrino elaborato! Verifica i prezzi');
+        
+        // Evidenzia gli articoli aggiornati
+        setTimeout(() => {
+            document.querySelectorAll('[data-item-id] input').forEach(input => {
+                input.style.borderColor = '';
+                input.style.backgroundColor = '';
+            });
+        }, 2000);
+        
+    }, 1500);
+}
+
+// Chiudi modale
+function closeModal() {
+    const modal = document.querySelector('.fixed');
+    if (modal) modal.remove();
+}
 
     // ==================== BUDGET FUNCTIONS ====================
     function renderBudget() {
@@ -4774,8 +5104,8 @@ window.confirmQuantityWithStore = function(itemName) {
     container.innerHTML = '';
     
     const lang = userProfile?.language || 'it';
-    const t = getTranslations(lang);  // Ottieni le traduzioni
-    const currencySymbol = userProfile?.currencySymbol || 'lei';  // Per romeno
+    const t = getTranslations(lang);
+    const currencySymbol = userProfile?.currencySymbol || 'lei';
     
     const expensesByCategory = {};
     transactions
@@ -4788,10 +5118,9 @@ window.confirmQuantityWithStore = function(itemName) {
         const spent = expensesByCategory[category] || 0;
         const percentage = budgetAmount > 0 ? (spent / budgetAmount) * 100 : 0;
         
-        // 🔥 TRADUCI IL NOME DELLA CATEGORIA
+        // Traduci il nome della categoria
         let categoryName = category;
         
-        // Mappa le categorie italiane alle chiavi di traduzione
         const categoryMap = {
             'Alimentari': 'food',
             'Affitto': 'rent',
@@ -4807,15 +5136,16 @@ window.confirmQuantityWithStore = function(itemName) {
             'Altro': 'other'
         };
         
-        // Se la categoria è nella mappa, usa la traduzione
         const translationKey = categoryMap[category];
         if (translationKey && t[translationKey]) {
             categoryName = t[translationKey];
         }
-        // Altrimenti, prova a usare la categoria direttamente come chiave
         else if (t[category.toLowerCase()]) {
             categoryName = t[category.toLowerCase()];
         }
+        
+        // 🔥 MODIFICATO: valore vuoto invece di 0
+        const budgetValue = budgetAmount > 0 ? budgetAmount : '';
         
         const budgetHTML = `
             <div class="space-y-2">
@@ -4823,9 +5153,10 @@ window.confirmQuantityWithStore = function(itemName) {
                     <span class="font-medium">${categoryName}</span>
                     <div class="flex items-center gap-3">
                         <span class="text-sm text-gray-500">${currencySymbol}</span>
-                        <input type="number" value="${budgetAmount}" 
+                        <input type="number" value="${budgetValue}" 
                                onchange="updateBudget('${category}', this.value)"
-                               class="w-24 p-2 border rounded text-right">
+                               class="w-24 p-2 border rounded text-right"
+                               placeholder="0">
                     </div>
                 </div>
                 
