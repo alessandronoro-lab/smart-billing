@@ -1321,7 +1321,7 @@ const countries = {
 };
 let transactions = [];  // Nessuna transazione iniziale
 let shoppingList = [];  // Lista vuota all'avvio
-
+// Rendi accessibili globalmente per debug
 
 
 let budget = {
@@ -1337,6 +1337,8 @@ let budget = {
 window.transactions = transactions;
 window.shoppingList = shoppingList;
 window.budget = budget;
+window.userProfile = userProfile;
+
 // ==================== VARIABILI GEOLOCALIZZAZIONE ====================
 let currentLocationType = 'home'; // 'home', 'work', 'current'
 let currentCoords = null; // Per la posizione attuale (lat, lon)
@@ -3141,6 +3143,8 @@ async function addAsIs(productName) {
     const t = getTranslations(lang);
     
     const input = document.getElementById('shopping-item');
+    console.log('🔍 Input trovato:', input);
+    console.log('🔍 Valore prima:', input?.value);
     const itemName = name || input.value.trim();
     
     if (!itemName) {
@@ -3195,7 +3199,13 @@ async function addAsIs(productName) {
     // SALVA I DATI
     saveAllData();
     
-    input.value = '';
+     // 🔥 FORZA LO SVUOTAMENTO
+    if (input) {
+        input.value = '';
+        console.log('✅ Dopo svuotamento, valore:', input.value);
+    } else {
+        console.log('❌ Input non trovato al momento dello svuotamento');
+    }
     renderShoppingList();
     
     const confidenceIcon = bestPrice.confidence > 0.8 ? '✅' : '⚠️';
@@ -4258,9 +4268,9 @@ if (shoppingCountEl) {
     // Impara SEMPRE se la categoria scelta è diversa dal suggerimento
     if (category !== suggestedCategory) {
         learnCategory(desc, category);
-
     }
     
+    // 🔥 AGGIUNGI LA TRANSAZIONE (UNA SOLA VOLTA)
     transactions.push({
         id: Date.now(),
         amount: amount,
@@ -4272,11 +4282,13 @@ if (shoppingCountEl) {
         store: storeName
     });
     
+    // Resetta i campi del form
     document.getElementById('expense-desc').value = '';
     document.getElementById('expense-amount').value = '';
     document.getElementById('expense-category').value = 'Altro';
     document.getElementById('category-suggestion-hint').classList.add('hidden');
 
+    // Salva tutti i dati
     saveAllData();
     
     const lang = userProfile?.language || 'it';
@@ -4925,6 +4937,13 @@ window.confirmQuantityWithUnit = function(itemName) {
         });
         
         renderShoppingList();
+
+         // 🔥 SVUOTA L'INPUT QUI
+         const input = document.getElementById('shopping-item');
+        if (input) {
+            input.value = '';
+            console.log('✅ Input svuotato da confirmQuantityWithUnit');
+        }
         showToast(`✅ ${formatProductNameWithUnit(itemName, quantity, selectedUnit)} aggiunto - ${formatCurrency(customPrice * quantity)} @ ${selectedStore}`);
         
     } else {
@@ -4947,6 +4966,13 @@ window.confirmQuantityWithUnit = function(itemName) {
             });
             
             renderShoppingList();
+
+            // 🔥 SVUOTA L'INPUT QUI
+            const input = document.getElementById('shopping-item');
+            if (input) {
+                input.value = '';
+                console.log('✅ Input svuotato da confirmQuantityWithUnit (senza prezzo)');
+            }
             showToast(`✅ ${formatProductNameWithUnit(itemName, quantity, selectedUnit)} aggiunto - ${formatCurrency(bestPrice.price * quantity)} @ ${bestPrice.store}`);
         });
         return;
@@ -5100,6 +5126,8 @@ function registerAllPurchases() {
     const lang = userProfile?.language || 'it';
     const t = getTranslations(lang);
     showToast(`✅ ${registered} ${t['purchases-registered'] || 'acquisti registrati!'}`);
+    // 🔥 FORZA L'AGGIORNAMENTO DELLE OTTIMIZZAZIONI
+    updateOptimizationPreview();
     showScreen('shopping');
     renderShoppingList();
     }   
@@ -5546,6 +5574,28 @@ function saveProfile() {
     userProfile.homeProvince = homeProvince;
     userProfile.homeCountry = homeCountry;
     userProfile.homeFullAddress = `${homeStreet} ${homeNumber}, ${homeCity} (${homeProvince})`;
+
+    // 🔥 AGGIUNGI IL SALVATAGGIO DEI DATI DI LAVORO
+    const workStreet = document.getElementById('work-street').value.trim();
+    const workNumber = document.getElementById('work-number').value.trim();
+    const workCity = document.getElementById('work-city').value.trim();
+    const workProvince = document.getElementById('work-province').value.trim();
+    const workCountry = document.getElementById('work-country').value;
+    const workCompany = document.getElementById('work-company').value.trim();
+
+    userProfile.workStreet = workStreet;
+    userProfile.workNumber = workNumber;
+    userProfile.workCity = workCity;
+    userProfile.workProvince = workProvince;
+    userProfile.workCountry = workCountry;
+    userProfile.workCompany = workCompany;
+
+    // Costruisci l'indirizzo completo solo se almeno un campo è compilato
+    if (workStreet || workNumber || workCity || workProvince) {
+        userProfile.workFullAddress = `${workStreet} ${workNumber}, ${workCity} (${workProvince})`.trim();
+    } else {
+        userProfile.workFullAddress = '';
+}
     
     // Lingua e valuta
     userProfile.language = language;
@@ -5713,10 +5763,22 @@ function saveProfile() {
         transactions
             .filter(t => t.type === 'uscita' && t.description && t.description.includes('@'))
             .forEach(t => {
-                const parts = t.description.split('@');
-                const store = parts.length > 1 ? parts[1].trim() : 'Altro';
-                storeExpenses[store] = (storeExpenses[store] || 0) + t.amount;
-            });
+                // Determina il nome del negozio
+        let store = 'Altro';
+        
+        // 1. Se esiste il campo store nella transazione, usalo
+        if (t.store && t.store.trim() !== '') {
+            store = t.store;
+        }
+        // 2. Altrimenti cerca nella descrizione con @
+        else if (t.description && t.description.includes('@')) {
+            const parts = t.description.split('@');
+            store = parts.length > 1 ? parts[1].trim() : 'Altro';
+        }
+        
+        // Aggrega per negozio
+        storeExpenses[store] = (storeExpenses[store] || 0) + t.amount;
+    });
         
         const storeContainer = document.getElementById('store-chart');
         if (storeContainer) {
@@ -5779,6 +5841,12 @@ function saveProfile() {
             }
         }
     }
+    // Rendi accessibili globalmente per debug
+    window.transactions = transactions;
+    window.renderReports = renderReports;
+    window.shoppingList = shoppingList;
+    window.budget = budget;
+    window.userProfile = userProfile;
 
 
     // ==================== STORE FUNCTIONS - CORRETTE ====================
@@ -8742,11 +8810,13 @@ function loadAllData() {
             console.log(`✅ ${transactions.length} transazioni caricate`);
         }
         
-        // Carica lista spesa
+        // Carica lista spesa - SOLO SE NON CI SONO GIÀ DATI IN MEMORIA
         const savedShoppingList = localStorage.getItem('smart_billing_shopping');
-        if (savedShoppingList) {
+        if (savedShoppingList && shoppingList.length === 0) {
             shoppingList = JSON.parse(savedShoppingList);
             console.log(`✅ ${shoppingList.length} articoli in lista caricati`);
+        } else if (shoppingList.length > 0) {
+            console.log(`ℹ️ Lista spesa già presente in memoria (${shoppingList.length} articoli), non sovrascrivo`);
         }
         
         // Carica budget
