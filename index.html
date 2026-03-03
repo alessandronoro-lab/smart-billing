@@ -1289,7 +1289,6 @@ let userProfile = {
     currency: 'EUR',
     currencySymbol: '€'
 };
-window.userProfile = userProfile;
 
 
 // Dizionari per lingue e valute
@@ -1331,14 +1330,35 @@ let budget = {
     Bollette: 0,
     Trasporti: 0,
     Svago: 0,
-    Salute: 0
+    Salute: 0,
+    Altro: 0  // 🔥 AGGIUNTO
 };
+// Cache locale
+let productCache = JSON.parse(localStorage.getItem('productCache') || '{}');
+let userPriceDB = JSON.parse(localStorage.getItem('userPriceDB') || '{}');
+let priceStats = JSON.parse(localStorage.getItem('priceStats') || '{}');
 // Rendi accessibili globalmente per debug
-window.transactions = transactions;
 window.shoppingList = shoppingList;
+window.userPriceDB = userPriceDB;
+window.transactions = transactions;
 window.budget = budget;
 window.userProfile = userProfile;
 
+function exposeGlobals() {
+    window.shoppingList = shoppingList;
+    window.userPriceDB = userPriceDB;
+    window.transactions = transactions;
+    window.budget = budget;
+    window.userProfile = userProfile;
+    window.productCache = productCache;
+    window.priceStats = priceStats;
+    console.log('🌍 Variabili esposte globalmente');
+}
+// 🔥 AGGIUNGI QUESTA RIGA - RENDE LA FUNZIONE GLOBALE
+window.exposeGlobals = exposeGlobals;
+
+// 🔥 AGGIUNGI QUESTA RIGA - CHIAMA SUBITO LA FUNZIONE
+exposeGlobals();
 // ==================== VARIABILI GEOLOCALIZZAZIONE ====================
 let currentLocationType = 'home'; // 'home', 'work', 'current'
 let currentCoords = null; // Per la posizione attuale (lat, lon)
@@ -3099,6 +3119,7 @@ function closeSuggestionModal() {
     }
 }
 
+/*
 async function addAsIs(productName) {
     closeSuggestionModal();
     
@@ -3131,12 +3152,13 @@ async function addAsIs(productName) {
         // Aggiorna i prodotti nei negozi quando aggiungi un nuovo prodotto
         updateStoreProducts();
     }
-
+*/
     function addDuplicateProduct(productName) {
         closeSuggestionModal();
         addShoppingItemInternal(productName, true);
     }
 
+    /*
     async function addShoppingItemInternal(name, quantity = 1, selectedStore = null, forceAdd = false) {
     console.log('4️⃣ addShoppingItemInternal chiamata con', name, quantity, selectedStore);
     const lang = userProfile?.language || 'it';
@@ -3211,8 +3233,9 @@ async function addAsIs(productName) {
     const confidenceIcon = bestPrice.confidence > 0.8 ? '✅' : '⚠️';
     showToast(`${confidenceIcon} ${itemName} x${quantity} ${t['added'] || 'aggiunto'} - ${formatCurrency(bestPrice.price * quantity)} @ ${bestPrice.store}`);
 }
-
+*/
     // ==================== SHOPPING PRICE FUNCTIONS ====================
+    /*
     async function updateItemPrices() {
     for (const item of shoppingList) {
         if (!item.checked) {
@@ -3225,7 +3248,7 @@ async function addAsIs(productName) {
     }
     updateOptimizationPreview();
 }
-
+*/
     function updateOptimizationPreview() {
         const itemsToBuy = shoppingList.filter(item => !item.checked);
         
@@ -3250,20 +3273,58 @@ async function addAsIs(productName) {
     }
 
     function calculateLowestPriceSolution(items) {
+    console.log('📊 Calcolo lowest price con items:', items.map(i => ({
+        name: i.name,
+        price: i.bestPrice,
+        store: i.bestStore,
+        quantity: i.quantity || 1
+    })));
+    
+    // Raggruppa per nome prodotto
+    const products = {};
+    
+    items.forEach(item => {
+        const productName = item.name;
+        const quantity = item.quantity || 1;
+        const price = item.bestPrice || 0;
+        const store = item.bestStore;
+        
+        if (!products[productName]) {
+            products[productName] = {
+                totalQuantity: 0,
+                bestPrice: price,
+                bestStore: store
+            };
+        }
+        
+        products[productName].totalQuantity += quantity;
+        
+        // Aggiorna se troviamo un prezzo più basso per questo prodotto
+        if (price < products[productName].bestPrice) {
+            products[productName].bestPrice = price;
+            products[productName].bestStore = store;
+        }
+    });
+    
+    console.log('📊 Prodotti raggruppati:', products);
+    
     let totalPrice = 0;
     const storesUsed = new Set();
     
-    items.forEach(item => {
-        const quantity = item.quantity || 1;  // 🔥 USARE quantity
-        totalPrice += (item.bestPrice || 0) * quantity;
-        storesUsed.add(item.bestStore);
+    Object.values(products).forEach(product => {
+        totalPrice += product.bestPrice * product.totalQuantity;
+        storesUsed.add(product.bestStore);
     });
     
-    return {
+    const result = {
         totalPrice: totalPrice,
         storeCount: storesUsed.size,
         stores: Array.from(storesUsed)
     };
+    
+    console.log('📊 Risultato lowest price:', result);
+    
+    return result;
 }
 
 function calculateFewestStoresSolution(items) {
@@ -3275,11 +3336,10 @@ function calculateFewestStoresSolution(items) {
         productQuantities[item.name] = item.quantity || 1;
     });
     
-    // 🔥 USA SOLO bestStore e bestPrice (niente item.prices)
+    // Raccogli prodotti per negozio
     items.forEach(item => {
         const quantity = item.quantity || 1;
         
-        // Considera solo negozi REALI (non "Prezzo stimato")
         if (item.bestStore && item.bestStore !== 'Prezzo stimato') {
             if (!storeProducts[item.bestStore]) {
                 storeProducts[item.bestStore] = [];
@@ -3287,11 +3347,72 @@ function calculateFewestStoresSolution(items) {
             storeProducts[item.bestStore].push({
                 name: item.name,
                 price: item.bestPrice || 0,
-                quantity: quantity
+                quantity: quantity,
+                id: item.id
             });
         }
     });
     
+    // 🔥 PRIMA COSA: cerca se un singolo negozio ha TUTTI i prodotti
+    const allProductNames = [...new Set(items.map(i => i.name))];
+    let bestSingleStore = null;
+    let bestSingleStorePrice = Infinity;
+    
+    for (const [storeName, products] of Object.entries(storeProducts)) {
+        const storeProductNames = new Set(products.map(p => p.name));
+        
+        // Verifica se questo negozio ha tutti i prodotti
+        const hasAllProducts = allProductNames.every(name => storeProductNames.has(name));
+        
+        if (hasAllProducts) {
+            // Calcola il prezzo totale in questo negozio
+            let storeTotal = 0;
+            allProductNames.forEach(productName => {
+                // Trova il prezzo di questo prodotto nel negozio
+                const product = products.find(p => p.name === productName);
+                if (product) {
+                    const totalQty = items
+                        .filter(i => i.name === productName)
+                        .reduce((sum, i) => sum + (i.quantity || 1), 0);
+                    storeTotal += product.price * totalQty;
+                }
+            });
+            
+            if (storeTotal < bestSingleStorePrice) {
+                bestSingleStorePrice = storeTotal;
+                bestSingleStore = storeName;
+            }
+        }
+    }
+    
+    // Se abbiamo trovato un negozio con tutti i prodotti, usiamo quello
+    if (bestSingleStore) {
+        // Costruisci i prodotti per questo negozio con le quantità totali
+        const storeProductsList = [];
+        allProductNames.forEach(productName => {
+            const totalQty = items
+                .filter(i => i.name === productName)
+                .reduce((sum, i) => sum + (i.quantity || 1), 0);
+            const price = storeProducts[bestSingleStore].find(p => p.name === productName).price;
+            
+            storeProductsList.push({
+                name: productName,
+                price: price,
+                quantity: totalQty
+            });
+        });
+        
+        return {
+            totalPrice: bestSingleStorePrice,
+            storeCount: 1,
+            stores: [bestSingleStore],
+            storeProducts: {
+                [bestSingleStore]: storeProductsList
+            }
+        };
+    }
+    
+    // 🔥 SOLO SE NON C'È UN NEGOZIO CON TUTTI, procedi con la logica greedy originale
     const selectedStores = [];
     const coveredProducts = new Set();
     let totalPrice = 0;
@@ -3301,7 +3422,7 @@ function calculateFewestStoresSolution(items) {
         let bestCoverage = 0;
         
         Object.entries(storeProducts).forEach(([storeName, products]) => {
-            const newProducts = products.filter(p => !coveredProducts.has(p.name));
+            const newProducts = products.filter(p => !coveredProducts.has(p.id));
             if (newProducts.length > bestCoverage) {
                 bestCoverage = newProducts.length;
                 bestStore = storeName;
@@ -3311,8 +3432,8 @@ function calculateFewestStoresSolution(items) {
         if (bestStore) {
             selectedStores.push(bestStore);
             storeProducts[bestStore].forEach(product => {
-                if (!coveredProducts.has(product.name)) {
-                    coveredProducts.add(product.name);
+                if (!coveredProducts.has(product.id)) {
+                    coveredProducts.add(product.id);
                     totalPrice += product.price * product.quantity;
                 }
             });
@@ -3328,8 +3449,14 @@ function calculateFewestStoresSolution(items) {
         stores: selectedStores
     };
 }
-
 function calculateBalancedSolution(items) {
+    console.log('⚖️ Calcolo "Optimizat" con items:', items.map(i => ({
+        name: i.name,
+        price: i.bestPrice,
+        store: i.bestStore,
+        quantity: i.quantity || 1
+    })));
+    
     if (items.length === 0) {
         return {
             totalPrice: 0,
@@ -3338,116 +3465,117 @@ function calculateBalancedSolution(items) {
         };
     }
 
-    // 🔥 Mappa delle quantità
-    const productQuantities = {};
+    // Raggruppa per nome prodotto
+    const products = {};
     items.forEach(item => {
-        productQuantities[item.name] = item.quantity || 1;
-    });
-
-    // 🔥 Raccogli SOLO i negozi REALI (escludi "Prezzo stimato")
-    const allStores = new Set();
-    items.forEach(item => {
-        if (item.bestStore && item.bestStore !== 'Prezzo stimato') {
-            allStores.add(item.bestStore);
+        const productName = item.name;
+        const quantity = item.quantity || 1;
+        
+        if (!products[productName]) {
+            products[productName] = {
+                totalQuantity: 0,
+                storePrices: {}
+            };
         }
+        products[productName].totalQuantity += quantity;
+        products[productName].storePrices[item.bestStore] = item.bestPrice;
     });
     
-    const storesArray = Array.from(allStores);
-    
-    // Se non ci sono negozi reali, usa lowest price
-    if (storesArray.length === 0) {
-        return calculateLowestPriceSolution(items);
-    }
+    // Trova tutti i negozi disponibili
+    const allStores = [...new Set(items.map(item => item.bestStore))];
     
     let bestSolution = null;
     let bestScore = -Infinity;
-    let bestTotalPrice = Infinity;
     
-    const maxStores = Math.min(3, storesArray.length);
-    
-    for (let numStores = 1; numStores <= maxStores; numStores++) {
-        const combinations = getStoreCombinationsArray(storesArray, numStores);
+    // Prova diverse combinazioni di negozi (da 1 a 3)
+    for (let numStores = 1; numStores <= Math.min(3, allStores.length); numStores++) {
+        const combinations = getStoreCombinationsArray(allStores, numStores);
         
         for (const storeCombo of combinations) {
-            // 🔥 Calcola direttamente senza usare calculateSolutionForStores
+            // Verifica se questa combinazione copre tutti i prodotti
+            let allProductsCovered = true;
             let totalPrice = 0;
-            const coveredProducts = new Set();
+            const storesUsed = new Set();
             const itemsByStore = {};
             
             storeCombo.forEach(store => {
                 itemsByStore[store] = [];
             });
             
-            items.forEach(item => {
-                const quantity = item.quantity || 1;
-                if (storeCombo.includes(item.bestStore)) {
-                    coveredProducts.add(item.name);
-                    const itemTotal = (item.bestPrice || 0) * quantity;
+            // Per ogni prodotto, trova il miglior prezzo tra i negozi della combinazione
+            Object.entries(products).forEach(([productName, product]) => {
+                let bestPriceForProduct = Infinity;
+                let bestStoreForProduct = null;
+                
+                storeCombo.forEach(store => {
+                    if (product.storePrices[store] && product.storePrices[store] < bestPriceForProduct) {
+                        bestPriceForProduct = product.storePrices[store];
+                        bestStoreForProduct = store;
+                    }
+                });
+                
+                if (bestStoreForProduct) {
+                    const itemTotal = bestPriceForProduct * product.totalQuantity;
                     totalPrice += itemTotal;
+                    storesUsed.add(bestStoreForProduct);
                     
-                    itemsByStore[item.bestStore].push({
-                        name: item.name,
-                        price: item.bestPrice,
-                        quantity: quantity,
+                    itemsByStore[bestStoreForProduct].push({
+                        name: productName,
+                        price: bestPriceForProduct,
+                        quantity: product.totalQuantity,
                         total: itemTotal
                     });
+                } else {
+                    allProductsCovered = false;
                 }
             });
             
-            const coverage = coveredProducts.size / items.length;
-            
-            // 🔥 Score: bilancia copertura, prezzo e numero negozi
-            const storePenalty = storeCombo.length / maxStores;
-            const priceFactor = 100 / (totalPrice + 1);
-            const coverageFactor = coverage * 100;
-            const storeFactor = (1 - storePenalty) * 50;
-            const score = coverageFactor + priceFactor + storeFactor;
-            
-            // Costruisci la soluzione
-            const solution = {
-                totalPrice: totalPrice,
-                storeCount: storeCombo.length,
-                stores: storeCombo,
-                coverage: coverage,
-                items: Array.from(coveredProducts).map(name => {
-                    const item = items.find(i => i.name === name);
-                    return {
-                        name: name,
-                        store: item.bestStore,
-                        price: item.bestPrice,
-                        quantity: item.quantity || 1
-                    };
-                }),
-                itemsByStore: itemsByStore
-            };
-            
-            // Aggiorna la miglior soluzione
-            if (coverage > 0.99) { // Soluzione che copre tutti i prodotti
-                if (!bestSolution || 
-                    bestSolution.coverage < 0.99 ||
-                    storeCombo.length < bestSolution.storeCount ||
-                    (storeCombo.length === bestSolution.storeCount && totalPrice < bestTotalPrice)) {
-                    
-                    bestScore = score;
-                    bestTotalPrice = totalPrice;
-                    bestSolution = solution;
-                }
-            } else if (!bestSolution || 
-                      coverage > bestSolution.coverage || 
-                      (coverage === bestSolution.coverage && totalPrice < bestTotalPrice)) {
+            if (allProductsCovered) {
+                // Calcola uno score: più basso è il prezzo e meno negozi, meglio è
+                const priceScore = 10000 / (totalPrice + 1); // Più prezzo basso = più score
+                const storeScore = (allStores.length - storesUsed.size + 1) * 1000; // Meno negozi = più score
+                const totalScore = priceScore + storeScore;
                 
-                bestScore = score;
-                bestTotalPrice = totalPrice;
-                bestSolution = solution;
+                if (totalScore > bestScore) {
+                    bestScore = totalScore;
+                    bestSolution = {
+                        totalPrice: totalPrice,
+                        storeCount: storesUsed.size,
+                        stores: Array.from(storesUsed),
+                        itemsByStore: itemsByStore,
+                        items: Object.entries(products).map(([productName, product]) => {
+                            // Trova il negozio scelto per questo prodotto nella soluzione
+                            let chosenStore = null;
+                            let chosenPrice = null;
+                            
+                            storeCombo.forEach(store => {
+                                if (product.storePrices[store] && 
+                                    (!chosenPrice || product.storePrices[store] < chosenPrice)) {
+                                    chosenPrice = product.storePrices[store];
+                                    chosenStore = store;
+                                }
+                            });
+                            
+                            return {
+                                name: productName,
+                                store: chosenStore,
+                                price: chosenPrice,
+                                quantity: product.totalQuantity
+                            };
+                        })
+                    };
+                }
             }
         }
     }
     
-    // Fallback
-    if (!bestSolution || bestSolution.coverage < 0.7) {
+    // Fallback: se non trova soluzione, usa lowest price
+    if (!bestSolution) {
+        console.log('⚠️ Nessuna soluzione ottimizzata trovata, uso lowest price');
         return calculateLowestPriceSolution(items);
     }
     
+    console.log('🏆 Migliore soluzione ottimizzata:', bestSolution);
     return bestSolution;
 }
 
@@ -3618,10 +3746,20 @@ function optimizeBalanced() {
         return;
     }
     
+    // 🔥 Calcola le quantità totali per prodotto (UTILE PER DOPO)
+    const productTotals = {};
+    itemsToBuy.forEach(item => {
+        const productName = item.name;
+        if (!productTotals[productName]) {
+            productTotals[productName] = 0;
+        }
+        productTotals[productName] += (item.quantity || 1);
+    });
+    
     let bestSolution = null;
     let bestCoverage = 0;
     let bestTotalPrice = Infinity;
-    let bestStores = [];
+    let bestStoreCount = Infinity;
     
     const maxStores = Math.min(storesArray.length, 4);
     
@@ -3632,67 +3770,116 @@ function optimizeBalanced() {
             let totalPrice = 0;
             const coveredProducts = [];
             const itemsByStore = {};
+            const productStoreMap = {}; // Mappa per tracciare dove comprare ogni prodotto
             
             storeCombo.forEach(store => {
                 itemsByStore[store] = [];
             });
             
-            itemsToBuy.forEach(item => {
-                const quantity = item.quantity || 1;
-                if (storeCombo.includes(item.bestStore)) {
-                    const itemTotal = (item.bestPrice || 0) * quantity;
+            // Per ogni prodotto, trova il miglior prezzo tra i negozi della combinazione
+            Object.entries(productTotals).forEach(([productName, totalQuantity]) => {
+                let bestPriceForProduct = Infinity;
+                let bestStoreForProduct = null;
+                
+                // Cerca tra tutti gli item originali per trovare il prezzo in ogni negozio
+                itemsToBuy.forEach(item => {
+                    if (item.name === productName && storeCombo.includes(item.bestStore)) {
+                        if (item.bestPrice < bestPriceForProduct) {
+                            bestPriceForProduct = item.bestPrice;
+                            bestStoreForProduct = item.bestStore;
+                        }
+                    }
+                });
+                
+                if (bestStoreForProduct) {
+                    const itemTotal = bestPriceForProduct * totalQuantity;
                     totalPrice += itemTotal;
-                    coveredProducts.push({
-                        name: item.name,
-                        store: item.bestStore,
-                        price: item.bestPrice,
-                        quantity: quantity,
-                        total: itemTotal
-                    });
                     
-                    itemsByStore[item.bestStore].push({
-                        name: item.name,
-                        price: item.bestPrice,
-                        quantity: quantity,
+                    // Salva per la soluzione raggruppata
+                    productStoreMap[productName] = {
+                        store: bestStoreForProduct,
+                        price: bestPriceForProduct,
+                        quantity: totalQuantity,
                         total: itemTotal
-                    });
+                    };
                 }
             });
             
-            const coverage = coveredProducts.length / itemsToBuy.length;
+            // Crea le versioni raggruppate per la visualizzazione
+            const groupedItems = [];
+            const groupedItemsByStore = {};
             
+            storeCombo.forEach(store => {
+                groupedItemsByStore[store] = [];
+            });
+            
+            Object.entries(productStoreMap).forEach(([productName, data]) => {
+                groupedItems.push({
+                    name: productName,
+                    store: data.store,
+                    price: data.price,
+                    quantity: data.quantity,
+                    total: data.total
+                });
+                
+                groupedItemsByStore[data.store].push({
+                    name: productName,
+                    price: data.price,
+                    quantity: data.quantity,
+                    total: data.total
+                });
+            });
+            
+            const coverage = Object.keys(productStoreMap).length / Object.keys(productTotals).length;
+            
+            // Criteri di selezione
             if (coverage > bestCoverage) {
                 bestCoverage = coverage;
                 bestTotalPrice = totalPrice;
-                bestStores = storeCombo;
+                bestStoreCount = storeCombo.length;
                 
                 bestSolution = {
-                    name: t['optimized'] || 'Ottimizzato',
+                    name: t['optimized'] || 'Optimizat',
                     description: coverage === 1 ? 
-                        (t['price-stores-balanced-desc'] || 'Prezzo e negozi bilanciati') : 
-                        `${t['covers'] || 'Copre'} ${coveredProducts.length} ${t['of'] || 'di'} ${itemsToBuy.length} ${t['products'] || 'prodotti'}`,
+                        (t['price-stores-balanced-desc'] || 'Preț și magazine echilibrate') : 
+                        `${t['covers'] || 'Acoperă'} ${Object.keys(productStoreMap).length} ${t['of'] || 'din'} ${Object.keys(productTotals).length} ${t['products'] || 'produse'}`,
                     totalPrice: totalPrice,
                     storeCount: storeCombo.length,
                     stores: storeCombo,
-                    items: coveredProducts,
-                    itemsByStore: itemsByStore
+                    items: groupedItems,              // 🔥 VERSIONE RAGGRUPPATA
+                    itemsByStore: groupedItemsByStore  // 🔥 VERSIONE RAGGRUPPATA
                 };
-            } else if (coverage === bestCoverage) {
-                if (storeCombo.length < bestStores.length || 
-                    (storeCombo.length === bestStores.length && totalPrice < bestTotalPrice)) {
+            } 
+            else if (coverage === bestCoverage) {
+                if (storeCombo.length < bestStoreCount) {
                     bestTotalPrice = totalPrice;
-                    bestStores = storeCombo;
+                    bestStoreCount = storeCombo.length;
                     
                     bestSolution = {
-                        name: t['optimized'] || 'Ottimizzato',
+                        name: t['optimized'] || 'Optimizat',
                         description: coverage === 1 ? 
-                            (t['price-stores-balanced-desc'] || 'Prezzo e negozi bilanciati') : 
-                            `${t['covers'] || 'Copre'} ${coveredProducts.length} ${t['of'] || 'di'} ${itemsToBuy.length} ${t['products'] || 'prodotti'}`,
+                            (t['price-stores-balanced-desc'] || 'Preț și magazine echilibrate') : 
+                            `${t['covers'] || 'Acoperă'} ${Object.keys(productStoreMap).length} ${t['of'] || 'din'} ${Object.keys(productTotals).length} ${t['products'] || 'produse'}`,
                         totalPrice: totalPrice,
                         storeCount: storeCombo.length,
                         stores: storeCombo,
-                        items: coveredProducts,
-                        itemsByStore: itemsByStore
+                        items: groupedItems,
+                        itemsByStore: groupedItemsByStore
+                    };
+                }
+                else if (storeCombo.length === bestStoreCount && totalPrice < bestTotalPrice) {
+                    bestTotalPrice = totalPrice;
+                    
+                    bestSolution = {
+                        name: t['optimized'] || 'Optimizat',
+                        description: coverage === 1 ? 
+                            (t['price-stores-balanced-desc'] || 'Preț și magazine echilibrate') : 
+                            `${t['covers'] || 'Acoperă'} ${Object.keys(productStoreMap).length} ${t['of'] || 'din'} ${Object.keys(productTotals).length} ${t['products'] || 'produse'}`,
+                        totalPrice: totalPrice,
+                        storeCount: storeCombo.length,
+                        stores: storeCombo,
+                        items: groupedItems,
+                        itemsByStore: groupedItemsByStore
                     };
                 }
             }
@@ -3782,152 +3969,790 @@ function showOptimizationResults(solution) {
     const lang = userProfile?.language || 'it';
     const t = getTranslations(lang);
     
-    document.getElementById('optimization-title').textContent = solution.name;
-    document.getElementById('opt-total-price').textContent = formatCurrency(solution.totalPrice);
-    document.getElementById('opt-store-count').textContent = solution.stores.length;
+    // 🔥 GESTIONE CEL MAI MIC PREȚ (già funzionante)
+    if (solution.name === t['lowest-price'] || solution.name === 'Prezzo più basso' || solution.name === 'Cel mai mic preț') {
+        
+        const itemsToBuy = shoppingList.filter(item => !item.checked);
+        const products = {};
+        
+        itemsToBuy.forEach(item => {
+            const productName = item.name;
+            const quantity = item.quantity || 1;
+            const price = item.bestPrice || 0;
+            
+            if (!products[productName]) {
+                products[productName] = {
+                    totalQuantity: 0,
+                    bestPrice: price,
+                    bestStore: item.bestStore
+                };
+            }
+            
+            products[productName].totalQuantity += quantity;
+            
+            if (price < products[productName].bestPrice) {
+                products[productName].bestPrice = price;
+                products[productName].bestStore = item.bestStore;
+            }
+        });
+        
+        let correctTotal = 0;
+        Object.values(products).forEach(product => {
+            correctTotal += product.bestPrice * product.totalQuantity;
+        });
+        
+        document.getElementById('opt-total-price').textContent = formatCurrency(correctTotal);
+        document.getElementById('opt-store-count').textContent = '1';
+        
+    } 
+    // 🔥 GESTIONE MAI PUȚINE MAGAZINE 
+    else if (solution.name === t['fewest-stores'] || solution.name === 'Mai puține magazine' || solution.name === 'Meno negozi') {
+        
+        const itemsToBuy = shoppingList.filter(item => !item.checked);
+        
+        // Trova il negozio con il prezzo totale più basso che ha tutti i prodotti
+        const storeTotals = {};
+        const storeHasAllProducts = {};
+        
+        // Inizializza
+        itemsToBuy.forEach(item => {
+            if (!storeTotals[item.bestStore]) {
+                storeTotals[item.bestStore] = 0;
+                storeHasAllProducts[item.bestStore] = new Set();
+            }
+        });
+        
+        // Calcola totali per negozio e raccogli prodotti disponibili
+        itemsToBuy.forEach(item => {
+            storeTotals[item.bestStore] += (item.bestPrice || 0) * (item.quantity || 1);
+            storeHasAllProducts[item.bestStore].add(item.name);
+        });
+        
+        // Verifica quali negozi hanno tutti i prodotti
+        const allProductNames = new Set(itemsToBuy.map(item => item.name));
+        let bestStore = null;
+        let bestTotal = Infinity;
+        
+        Object.entries(storeHasAllProducts).forEach(([store, products]) => {
+            // Verifica se questo negozio ha tutti i prodotti
+            let hasAll = true;
+            for (const productName of allProductNames) {
+                if (!products.has(productName)) {
+                    hasAll = false;
+                    break;
+                }
+            }
+            
+            if (hasAll && storeTotals[store] < bestTotal) {
+                bestTotal = storeTotals[store];
+                bestStore = store;
+            }
+        });
+        
+        // Se abbiamo trovato un negozio con tutti i prodotti, usiamo quello
+        if (bestStore) {
+            document.getElementById('opt-total-price').textContent = formatCurrency(bestTotal);
+            document.getElementById('opt-store-count').textContent = '1';
+        } else {
+            // Altrimenti usa i valori della soluzione
+            document.getElementById('opt-total-price').textContent = formatCurrency(solution.totalPrice);
+            document.getElementById('opt-store-count').textContent = solution.stores.length;
+        }
+        
+    } else {
+        // Per le altre ottimizzazioni, usa i valori della soluzione
+        document.getElementById('opt-total-price').textContent = formatCurrency(solution.totalPrice);
+        document.getElementById('opt-store-count').textContent = solution.stores.length;
+    }
     
+    document.getElementById('optimization-title').textContent = solution.name;
+    
+    // 🔥 GESTIONE DETTAGLI
     const detailsContainer = document.getElementById('optimization-details');
     detailsContainer.innerHTML = '';
     
-    const totalItems = shoppingList.filter(item => !item.checked).length;
-    const totalProducts = shoppingList
-        .filter(item => !item.checked)
-        .reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const allItems = shoppingList.filter(item => !item.checked);
+    const totalUnits = allItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
     
-    detailsContainer.innerHTML += `
-        <div class="p-3 bg-white rounded-lg mb-3">
-            <p class="text-sm text-gray-600">${solution.description}</p>
-            <p class="text-xs text-gray-500 mt-1">
-                <i class="fas fa-info-circle mr-1"></i>
-                ${solution.items.length} ${t['products'] || 'prodotti'} ${t['covered'] || 'coperti'} su ${totalItems}
-                (${solution.items.reduce((sum, i) => sum + (i.quantity || 1), 0)} ${t['units'] || 'unità'} totali)
-            </p>
-        </div>
-    `;
-    
-    if (solution.stores && solution.stores.length > 0) {
-        solution.stores.forEach(storeName => {
-            const storeItems = [];
-            let storeTotal = 0;
+    // SE È "CEL MAI MIC PREȚ" (Prezzo più basso)
+    if (solution.name === t['lowest-price'] || solution.name === 'Prezzo più basso' || solution.name === 'Cel mai mic preț') {
+        
+        // RAGGRUPPA per nome prodotto
+        const products = {};
+        allItems.forEach(item => {
+            const productName = item.name;
+            const quantity = item.quantity || 1;
+            const price = item.bestPrice || 0;
+            const store = item.bestStore;
             
-            if (solution.itemsByStore && solution.itemsByStore[storeName]) {
-                solution.itemsByStore[storeName].forEach(item => {
-                    const quantity = item.quantity || 1;
-                    const itemTotal = item.price * quantity;
-                    storeItems.push({
-                        name: item.name,
-                        price: item.price,
-                        quantity: quantity,
-                        total: itemTotal
-                    });
-                    storeTotal += itemTotal;
-                });
-            } else {
-                solution.items.forEach(item => {
-                    if (item.store === storeName) {
-                        const quantity = item.quantity || 1;
-                        const itemTotal = item.price * quantity;
-                        storeItems.push({
-                            name: item.name,
-                            price: item.price,
-                            quantity: quantity,
-                            total: itemTotal
+            if (!products[productName]) {
+                products[productName] = {
+                    totalQuantity: 0,
+                    bestPrice: price,
+                    bestStore: store
+                };
+            }
+            
+            products[productName].totalQuantity += quantity;
+            
+            // Prendi il prezzo più basso per questo prodotto
+            if (price < products[productName].bestPrice) {
+                products[productName].bestPrice = price;
+                products[productName].bestStore = store;
+            }
+        });
+        
+        // Riorganizza per negozio
+        const storesMap = {};
+        Object.entries(products).forEach(([productName, product]) => {
+            if (!storesMap[product.bestStore]) {
+                storesMap[product.bestStore] = [];
+            }
+            storesMap[product.bestStore].push({
+                name: productName,
+                price: product.bestPrice,
+                quantity: product.totalQuantity,
+                total: product.bestPrice * product.totalQuantity
+            });
+        });
+        
+        // Calcola il totale delle unità coperte
+        const coveredUnits = Object.values(storesMap).flat().reduce((sum, item) => sum + item.quantity, 0);
+        
+        // Descrizione
+        detailsContainer.innerHTML += `
+            <div class="p-3 bg-white rounded-lg mb-3">
+                <p class="text-sm text-gray-600">${t['min-total-desc'] || 'Fiecare produs cumpărat la cel mai mic preț disponibil'}</p>
+                <p class="text-xs text-gray-500 mt-1">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    ${Object.keys(products).length} ${t['products'] || 'produse'} distincte
+                    (${coveredUnits} ${t['units'] || 'unități'} totali)
+                </p>
+            </div>
+        `;
+        
+        // Mostra ogni negozio
+        Object.entries(storesMap).forEach(([storeName, items]) => {
+            const storeTotal = items.reduce((sum, i) => sum + i.total, 0);
+            const storeUnits = items.reduce((sum, i) => sum + i.quantity, 0);
+            
+            let itemsHTML = '';
+            items.forEach(item => {
+                itemsHTML += `
+                    <div class="flex justify-between text-sm items-center py-1">
+                        <span>${item.name} ${item.quantity > 1 ? `x${item.quantity}` : ''}</span>
+                        <span class="text-gray-600">${formatCurrency(item.total)}</span>
+                    </div>
+                `;
+            });
+            
+            detailsContainer.innerHTML += `
+                <div class="p-3 bg-white rounded-lg border mb-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-2">
+                            <p class="font-semibold">${storeName}</p>
+                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                ${items.length} ${t['products'] || 'produse'} 
+                                (${storeUnits} ${t['units'] || 'unități'})
+                            </span>
+                        </div>
+                        <p class="font-bold text-green-600">${formatCurrency(storeTotal)}</p>
+                    </div>
+                    <div class="space-y-1">
+                        ${itemsHTML}
+                    </div>
+                    <div class="mt-2 pt-2 border-t text-xs text-gray-500">
+                        ${t['store-total'] || 'Total magazin'}: ${formatCurrency(storeTotal)}
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Riepilogo finale per lowest price
+        let correctTotal = 0;
+        Object.values(products).forEach(product => {
+            correctTotal += product.bestPrice * product.totalQuantity;
+        });
+        
+        detailsContainer.innerHTML += `
+            <div class="p-4 bg-green-50 rounded-lg mt-3">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="font-semibold">${t['total-price'] || 'Preț Total'}:</p>
+                    <p class="font-bold text-green-600 text-xl">${formatCurrency(correctTotal)}</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                    <div>
+                        <p class="text-gray-500">${t['stores'] || 'Magazine'}</p>
+                        <p class="font-bold">${Object.keys(storesMap).length}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">${t['products'] || 'Produse'}</p>
+                        <p class="font-bold">${Object.keys(products).length}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">${t['units'] || 'Unități'}</p>
+                        <p class="font-bold">${Object.values(products).reduce((sum, p) => sum + p.totalQuantity, 0)}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+    } 
+    // SE È "MAI PUȚINE MAGAZINE" (Meno negozi)
+    else if (solution.name === t['fewest-stores'] || solution.name === 'Mai puține magazine' || solution.name === 'Meno negozi') {
+        
+        // Raggruppa per nome prodotto per ottenere le quantità totali
+        const products = {};
+        allItems.forEach(item => {
+            const productName = item.name;
+            const quantity = item.quantity || 1;
+            
+            if (!products[productName]) {
+                products[productName] = {
+                    totalQuantity: 0,
+                };
+            }
+            products[productName].totalQuantity += quantity;
+        });
+        
+        // Trova il miglior negozio singolo
+        const storeProductPrices = {};
+        allItems.forEach(item => {
+            if (!storeProductPrices[item.bestStore]) {
+                storeProductPrices[item.bestStore] = {};
+            }
+            storeProductPrices[item.bestStore][item.name] = item.bestPrice;
+        });
+        
+        // Calcola il totale per ogni negozio (considerando le quantità totali)
+        const storeTotals = {};
+        Object.entries(storeProductPrices).forEach(([store, prices]) => {
+            let storeTotal = 0;
+            Object.entries(products).forEach(([productName, product]) => {
+                if (prices[productName]) {
+                    storeTotal += prices[productName] * product.totalQuantity;
+                }
+            });
+            storeTotals[store] = storeTotal;
+        });
+        
+        // Verifica quali negozi hanno tutti i prodotti
+        const allProductNames = Object.keys(products);
+        let bestStore = null;
+        let bestTotal = Infinity;
+        
+        Object.entries(storeProductPrices).forEach(([store, prices]) => {
+            // Verifica se questo negozio ha tutti i prodotti
+            let hasAll = true;
+            for (const productName of allProductNames) {
+                if (!prices[productName]) {
+                    hasAll = false;
+                    break;
+                }
+            }
+            
+            if (hasAll && storeTotals[store] < bestTotal) {
+                bestTotal = storeTotals[store];
+                bestStore = store;
+            }
+        });
+        
+        if (bestStore) {
+            // Descrizione
+            detailsContainer.innerHTML += `
+                <div class="p-3 bg-white rounded-lg mb-3">
+                    <p class="text-sm text-gray-600">${t['fewer-stores-desc'] || 'Vizitează cât mai puține magazine posibil'}</p>
+                </div>
+            `;
+            
+            // Mostra il negozio con tutti i prodotti e le quantità totali
+            let itemsHTML = '';
+            
+            Object.entries(products).forEach(([productName, product]) => {
+                const price = storeProductPrices[bestStore][productName];
+                const itemTotal = price * product.totalQuantity;
+                
+                itemsHTML += `
+                    <div class="flex justify-between text-sm items-center py-1">
+                        <span>${productName} x${product.totalQuantity}</span>
+                        <span class="text-gray-600">${formatCurrency(itemTotal)}</span>
+                    </div>
+                `;
+            });
+            
+            const totalUnits = Object.values(products).reduce((sum, p) => sum + p.totalQuantity, 0);
+            const totalProducts = Object.keys(products).length;
+            
+            detailsContainer.innerHTML += `
+                <div class="p-3 bg-white rounded-lg border mb-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-2">
+                            <p class="font-semibold">${bestStore}</p>
+                            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                ${totalProducts} ${t['products'] || 'produse'} (${totalUnits} ${t['units'] || 'unități'})
+                            </span>
+                        </div>
+                        <p class="font-bold text-green-600">${formatCurrency(bestTotal)}</p>
+                    </div>
+                    <div class="space-y-1">
+                        ${itemsHTML}
+                    </div>
+                    <div class="mt-2 pt-2 border-t text-xs text-gray-500">
+                        ${t['store-total'] || 'Total magazin'}: ${formatCurrency(bestTotal)}
+                    </div>
+                </div>
+            `;
+            
+            // Riepilogo
+            detailsContainer.innerHTML += `
+                <div class="p-4 bg-green-50 rounded-lg mt-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="font-semibold">${t['total-price'] || 'Preț Total'}:</p>
+                        <p class="font-bold text-green-600 text-xl">${formatCurrency(bestTotal)}</p>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                        <div>
+                            <p class="text-gray-500">${t['stores'] || 'Magazine'}</p>
+                            <p class="font-bold">1</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">${t['products'] || 'Produse'}</p>
+                            <p class="font-bold">${totalProducts}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">${t['units'] || 'Unități'}</p>
+                            <p class="font-bold">${totalUnits}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Fallback: mostra tutti i negozi
+            detailsContainer.innerHTML += `
+                <div class="p-3 bg-white rounded-lg mb-3">
+                    <p class="text-sm text-gray-600">${t['fewer-stores-desc'] || 'Vizitează cât mai puține magazine posibil'}</p>
+                </div>
+            `;
+            
+            if (solution.stores && solution.stores.length > 0) {
+                solution.stores.forEach(storeName => {
+                    const storeItems = solution.items?.filter(item => item.store === storeName) || [];
+                    const storeTotal = storeItems.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+                    const storeUnits = storeItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+                    
+                    if (storeItems.length > 0) {
+                        let itemsHTML = '';
+                        storeItems.forEach(item => {
+                            const itemTotal = item.price * (item.quantity || 1);
+                            itemsHTML += `
+                                <div class="flex justify-between text-sm items-center py-1">
+                                    <span>${item.name} ${item.quantity > 1 ? `x${item.quantity}` : ''}</span>
+                                    <span class="text-gray-600">${formatCurrency(itemTotal)}</span>
+                                </div>
+                            `;
                         });
-                        storeTotal += itemTotal;
+                        
+                        detailsContainer.innerHTML += `
+                            <div class="p-3 bg-white rounded-lg border mb-3">
+                                <div class="flex justify-between items-center mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <p class="font-semibold">${storeName}</p>
+                                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                            ${storeItems.length} ${t['products'] || 'produse'} 
+                                            (${storeUnits} ${t['units'] || 'unități'})
+                                        </span>
+                                    </div>
+                                    <p class="font-bold text-green-600">${formatCurrency(storeTotal)}</p>
+                                </div>
+                                <div class="space-y-1">
+                                    ${itemsHTML}
+                                </div>
+                                <div class="mt-2 pt-2 border-t text-xs text-gray-500">
+                                    ${t['store-total'] || 'Total magazin'}: ${formatCurrency(storeTotal)}
+                                </div>
+                            </div>
+                        `;
                     }
                 });
             }
             
-            if (storeItems.length > 0) {
-                const storeHTML = `
-                    <div class="p-3 bg-white rounded-lg border mb-3">
-                        <div class="flex justify-between items-center mb-2">
-                            <div class="flex items-center gap-2">
-                                <p class="font-semibold">${storeName}</p>
-                                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                    ${storeItems.length} ${t['products'] || 'prodotti'} 
-                                    (${storeItems.reduce((sum, i) => sum + i.quantity, 0)} ${t['units'] || 'unità'})
-                                </span>
-                            </div>
-                            <p class="font-bold text-green-600">${formatCurrency(storeTotal)}</p>
+            // Riepilogo
+            const coveredUnits = solution.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0;
+            const coveredProducts = solution.items?.length || 0;
+            
+            detailsContainer.innerHTML += `
+                <div class="p-4 bg-green-50 rounded-lg mt-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="font-semibold">${t['total-price'] || 'Preț Total'}:</p>
+                        <p class="font-bold text-green-600 text-xl">${formatCurrency(solution.totalPrice)}</p>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                        <div>
+                            <p class="text-gray-500">${t['stores'] || 'Magazine'}</p>
+                            <p class="font-bold">${solution.stores.length}</p>
                         </div>
-                        <div class="space-y-2">
-                            ${storeItems.map(item => `
-                                <div class="flex justify-between text-sm items-center">
-                                    <span>${item.name} ${item.quantity > 1 ? `x${item.quantity}` : ''}</span>
-                                    <span class="text-gray-600">${formatCurrency(item.total)}</span>
-                                </div>
-                            `).join('')}
+                        <div>
+                            <p class="text-gray-500">${t['products'] || 'Produse'}</p>
+                            <p class="font-bold">${coveredProducts}</p>
                         </div>
-                        <div class="mt-2 pt-2 border-t text-xs text-gray-500">
-                            ${t['store-total'] || 'Totale negozio'}: ${formatCurrency(storeTotal)}
+                        <div>
+                            <p class="text-gray-500">${t['units'] || 'Unități'}</p>
+                            <p class="font-bold">${coveredUnits}</p>
                         </div>
                     </div>
-                `;
-                detailsContainer.innerHTML += storeHTML;
-            }
-        });
-    }
-    
-    const allItemsInList = shoppingList.filter(item => !item.checked).map(item => item.name);
-    const coveredItems = solution.items.map(item => item.name);
-    const missingItems = allItemsInList.filter(item => !coveredItems.includes(item));
-    
-    if (missingItems.length > 0) {
-        const missingHTML = `
-            <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div class="flex items-center gap-2 mb-2">
-                    <i class="fas fa-exclamation-triangle text-yellow-500"></i>
-                    <p class="font-semibold text-yellow-800">${t['attention'] || 'Attenzione'}: ${t['missing-products'] || 'prodotti mancanti'}</p>
                 </div>
-                <p class="text-sm text-yellow-700">
-                    ${missingItems.length} ${t['products'] || 'prodotti'} ${t['not-covered'] || 'non sono coperti da questa soluzione'}:
-                    <span class="font-medium">${missingItems.join(', ')}</span>
-                </p>
-                <p class="text-xs text-yellow-600 mt-1">
-                    ${t['not-available'] || 'Questi prodotti non sono disponibili nei negozi selezionati'}
-                </p>
-            </div>
-        `;
-        detailsContainer.innerHTML += missingHTML;
-    }
-    
-    const hasEstimatedPrices = solution.items.some(item => 
-        item.store === 'Prezzo stimato' || item.source === 'estimate'
-    );
-    
-    if (hasEstimatedPrices) {
+            `;
+        }
+        
+    } else {
+        // PER LE ALTRE OTTIMIZZAZIONI (Optimizat)
         detailsContainer.innerHTML += `
-            <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mt-3">
-                <div class="flex items-start gap-2">
-                    <i class="fas fa-exclamation-triangle text-yellow-500 mt-1"></i>
+            <div class="p-3 bg-white rounded-lg mb-3">
+                <p class="text-sm text-gray-600">${solution.description}</p>
+            </div>
+        `;
+        
+        if (solution.stores && solution.stores.length > 0) {
+            solution.stores.forEach(storeName => {
+                const storeItems = solution.items?.filter(item => item.store === storeName) || [];
+                const storeTotal = storeItems.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+                const storeUnits = storeItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+                
+                if (storeItems.length > 0) {
+                    let itemsHTML = '';
+                    storeItems.forEach(item => {
+                        const itemTotal = item.price * (item.quantity || 1);
+                        itemsHTML += `
+                            <div class="flex justify-between text-sm items-center py-1">
+                                <span>${item.name} ${item.quantity > 1 ? `x${item.quantity}` : ''}</span>
+                                <span class="text-gray-600">${formatCurrency(itemTotal)}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    detailsContainer.innerHTML += `
+                        <div class="p-3 bg-white rounded-lg border mb-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center gap-2">
+                                    <p class="font-semibold">${storeName}</p>
+                                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                        ${storeItems.length} ${t['products'] || 'produse'} 
+                                        (${storeUnits} ${t['units'] || 'unități'})
+                                    </span>
+                                </div>
+                                <p class="font-bold text-green-600">${formatCurrency(storeTotal)}</p>
+                            </div>
+                            <div class="space-y-1">
+                                ${itemsHTML}
+                            </div>
+                            <div class="mt-2 pt-2 border-t text-xs text-gray-500">
+                                ${t['store-total'] || 'Total magazin'}: ${formatCurrency(storeTotal)}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+        
+        // Riepilogo
+        const coveredUnits = solution.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0;
+        const coveredProducts = solution.items?.length || 0;
+        
+        detailsContainer.innerHTML += `
+            <div class="p-4 bg-green-50 rounded-lg mt-3">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="font-semibold">${t['total-price'] || 'Preț Total'}:</p>
+                    <p class="font-bold text-green-600 text-xl">${formatCurrency(solution.totalPrice)}</p>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center text-sm">
                     <div>
-                        <p class="font-semibold text-yellow-800">${t['estimated-prices'] || 'Prezzi stimati'}</p>
-                        <p class="text-sm text-yellow-700">
-                            ${t['estimated-warning'] || 'Alcuni prezzi sono stimati. Per un\'ottimizzazione accurata, correggi i prezzi manualmente.'}
-                        </p>
+                        <p class="text-gray-500">${t['stores'] || 'Magazine'}</p>
+                        <p class="font-bold">${solution.stores.length}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">${t['products'] || 'Produse'}</p>
+                        <p class="font-bold">${coveredProducts}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">${t['units'] || 'Unități'}</p>
+                        <p class="font-bold">${coveredUnits}</p>
                     </div>
                 </div>
             </div>
         `;
     }
-    
-    const summaryHTML = `
-        <div class="grid grid-cols-2 gap-2 mt-4">
-            <div class="p-2 bg-green-50 rounded text-center">
-                <p class="text-xs text-gray-600">${t['total-price'] || 'Prezzo Totale'}</p>
-                <p class="font-bold text-green-600">${formatCurrency(solution.totalPrice)}</p>
-            </div>
-            <div class="p-2 bg-blue-50 rounded text-center">
-                <p class="text-xs text-gray-600">${t['stores'] || 'Negozi'}</p>
-                <p class="font-bold text-blue-600">${solution.stores.length}</p>
-            </div>
-        </div>
-    `;
-    detailsContainer.innerHTML += summaryHTML;
     
     document.getElementById('optimization-results').classList.remove('hidden');
 }
+function applyOptimization() {
+    console.log('🔄 Applico soluzione di ottimizzazione:', currentOptimization);
+    
+    if (!currentOptimization) {
+        const lang = userProfile?.language || 'it';
+        const t = getTranslations(lang);
+        showToast(`⚠️ ${t['no-solution'] || 'Nessuna soluzione da applicare'}`);
+        return;
+    }
+    
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
+    // Per "Cel mai mic preț" (Prezzo più basso)
+    if (currentOptimization.name === t['lowest-price'] || 
+        currentOptimization.name === 'Prezzo più basso' || 
+        currentOptimization.name === 'Cel mai mic preț') {
+        
+        // Raggruppa i prodotti per nome e trova il miglior prezzo
+        const bestPrices = {};
+        shoppingList.forEach(item => {
+            if (!item.checked) {
+                const productName = item.name;
+                if (!bestPrices[productName] || item.bestPrice < bestPrices[productName].price) {
+                    bestPrices[productName] = {
+                        price: item.bestPrice,
+                        store: item.bestStore
+                    };
+                }
+            }
+        });
+        
+        // Applica i migliori prezzi a TUTTI gli item non acquistati
+        shoppingList.forEach(item => {
+            if (!item.checked && bestPrices[item.name]) {
+                item.bestPrice = bestPrices[item.name].price;
+                item.bestStore = bestPrices[item.name].store;
+                item.selectedStore = bestPrices[item.name].store;
+                console.log(`✅ ${item.name} ottimizzato: ${item.bestPrice} @ ${item.bestStore}`);
+            }
+        });
+        
+        showToast(`💰 ${t['lowest-price-applied'] || 'Prezzi ottimizzati con cel mai mic preț'}`);
+    }
+    
+    // Per "Mai puține magazine" (Meno negozi)
+    else if (currentOptimization.name === t['fewest-stores'] || 
+             currentOptimization.name === 'Mai puține magazine' || 
+             currentOptimization.name === 'Meno negozi') {
+        
+        if (currentOptimization.items && currentOptimization.items.length > 0) {
+            currentOptimization.items.forEach(optItem => {
+                const item = shoppingList.find(i => 
+                    i.name === optItem.name && 
+                    (i.selectedStore || i.bestStore) === optItem.store && 
+                    !i.checked
+                );
+                if (item) {
+                    item.bestPrice = optItem.price;
+                    item.bestStore = optItem.store;
+                    item.selectedStore = optItem.store;
+                }
+            });
+        }
+        showToast(`🏪 ${t['fewest-stores-applied'] || 'Ottimizzato per mai puține magazine'}`);
+    }
+    
+    // Per "Optimizat" (Ottimizzato)
+    else if (currentOptimization.name === t['optimized'] || 
+             currentOptimization.name === 'Optimizat' || 
+             currentOptimization.name === 'Ottimizzato') {
+        
+        if (currentOptimization.items && currentOptimization.items.length > 0) {
+            currentOptimization.items.forEach(optItem => {
+                const item = shoppingList.find(i => 
+                    i.name === optItem.name && 
+                    (i.selectedStore || i.bestStore) === optItem.store && 
+                    !i.checked
+                );
+                if (item) {
+                    item.bestPrice = optItem.price;
+                    item.bestStore = optItem.store;
+                    item.selectedStore = optItem.store;
+                }
+            });
+        }
+        showToast(`⚖️ ${t['balanced-applied'] || 'Ottimizzazione bilanciata applicata'}`);
+    }
+    
+    saveAllData();
+    renderShoppingList();
+    closeOptimizationResults();
+}
+
+function closeOptimizationResults() {
+    const resultsDiv = document.getElementById('optimization-results');
+    if (resultsDiv) {
+        resultsDiv.classList.add('hidden');
+    }
+    currentOptimization = null;
+}
+/**
+ * Salva prezzo inserito dall'utente
+ */
+// SOSTITUISCI la funzione saveUserPrice con questa versione
+function saveUserPrice(productName, storeName, price, options = {}) {
+    console.log('💰 saveUserPrice CHIAMATA con:', { productName, storeName, price });
+    
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    const key = `${productName.toLowerCase()}_${storeName.toLowerCase()}`; // 🔥 AGGIUNTO .toLowerCase() anche a storeName
+    
+    if (!userPriceDB[key]) {
+        userPriceDB[key] = [];
+    }
+    
+    userPriceDB[key].push({
+        price: price,
+        date: new Date().toISOString(),
+        userId: userProfile?.email || 'anonimo',
+        source: options.source || 'manual',
+        confidence: options.confidence || 0.9
+    });
+    
+    // Mantieni solo gli ultimi 5 prezzi per chiave (una volta sola!)
+    if (userPriceDB[key].length > 5) {
+        userPriceDB[key] = userPriceDB[key].slice(-5);
+    }
+    
+    // 🔴 CORREZIONE CRUCIALE: Aggiorna SOLO l'articolo con lo STESSO negozio
+    shoppingList.forEach(item => {
+        const itemName = (item.name || '').toLowerCase().trim();
+        const searchName = productName.toLowerCase().trim();
+        const itemStore = (item.selectedStore || item.bestStore || '').toLowerCase().trim();
+        const searchStore = storeName.toLowerCase().trim();
+        
+        // Confronta sia nome CHE negozio
+        if (itemName === searchName && itemStore === searchStore) {
+            item.bestPrice = price;
+            item.bestStore = storeName;
+            item.source = 'user';
+            item.confidence = 1.0;
+            console.log(`✅ Articolo "${item.name} @ ${itemStore}" aggiornato con nuovo prezzo ${price}`);
+        } else if (itemName === searchName) {
+            console.log(`⚠️ Trovato "${item.name}" ma negozio diverso (${itemStore} vs ${searchStore}) - NON aggiornato`);
+        }
+    });
+    
+    // Aggiorna statistiche
+    if (!priceStats[productName]) {
+        priceStats[productName] = { count: 0, sum: 0, min: price, max: price };
+    }
+    const stats = priceStats[productName];
+    stats.count++;
+    stats.sum += price;
+    stats.min = Math.min(stats.min, price);
+    stats.max = Math.max(stats.max, price);
+    stats.average = stats.sum / stats.count;
+    
+    saveCache();
+    saveAllData();
+
+    // 🔥 AGGIUNGI QUI
+    exposeGlobals();
+    
+    // Aggiorna UI se necessario
+    if (document.getElementById('screen-shopping')?.classList.contains('active')) {
+        renderShoppingList();
+        setTimeout(updateOptimizationPreview, 100);
+    }
+    
+    showToast(`💰 ${t['price-saved-toast'] || 'Prezzo salvato!'}`);
+    
+    return true;
+}
+/**
+ * Ottieni miglior prezzo per un prodotto
+ */
+ async function getBestPrice(productName, storeName = null) {
+    console.log(`🔍 getBestPrice chiamato per: ${productName}, store preferito: ${storeName}`);
+    
+    const productLower = productName.toLowerCase();
+    let prices = [];
+    
+    // 🔥 MODIFICATO: Prima cerca nel database utente
+    for (const [key, entries] of Object.entries(userPriceDB)) {
+        if (key.includes(productLower) && entries.length > 0) {
+            const lastEntry = entries[entries.length - 1];
+            
+            // Se è stato specificato un negozio preferito, DAI PRIORITÀ a quello
+            if (storeName && key.includes(storeName.toLowerCase())) {
+                console.log(`✅ Trovato prezzo per il negozio preferito ${storeName}: ${lastEntry.price}`);
+                return {
+                    price: lastEntry.price,
+                    store: storeName,
+                    source: 'user',
+                    confidence: 1.0,
+                    date: lastEntry.date
+                };
+            }
+            
+            // Altrimenti raccogli tutti i prezzi
+            prices.push({
+                price: lastEntry.price,
+                store: key.split('_')[1],
+                source: 'user',
+                confidence: 0.9 + (entries.length * 0.02),
+                date: lastEntry.date
+            });
+        }
+    }
+    
+    // Se c'è un negozio preferito ma non abbiamo trovato prezzi, CERCA COMUNQUE
+    if (storeName && prices.length === 0) {
+        console.log(`⚠️ Nessun prezzo trovato per ${storeName}, cerco altri negozi`);
+    }
+    
+    // Ordina i prezzi trovati (prima per data più recente, poi per prezzo)
+    if (prices.length > 0) {
+        // Ordina per data (più recente prima)
+        prices.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        console.log(`🏷️ Prezzi trovati per ${productName}:`, prices);
+        
+        // Prendi il più recente
+        const bestPrice = prices[0];
+        console.log(`✅ Usando prezzo più recente: ${bestPrice.price} @ ${bestPrice.store} (${bestPrice.date})`);
+        
+        return bestPrice;
+    }
+    
+    // Se non trovato, prezzo stimato
+    console.log(`⚠️ Nessun prezzo trovato per ${productName}, uso stima`);
+    const estimated = estimatePrice(productName);
+    return {
+        price: estimated,
+        store: 'Prezzo stimato',
+        source: 'estimate',
+        confidence: 0.5,
+        isEstimated: true
+    };
+}
+// Funzione per stimare il prezzo di un prodotto non nel database
+function estimatePriceForItem(itemName, storeName) {
+        const itemLower = itemName.toLowerCase();
+        
+        // Prima cerca nel database dei prezzi
+        if (storePrices[storeName] && storePrices[storeName][itemLower]) {
+            return storePrices[storeName][itemLower];
+        }
+        
+        // Se non trovato, cerca prodotti simili
+        let estimatedPrice = 5.00; // Prezzo di default
+        
+        // Cerca per categorie simili
+        if (itemLower.includes('pane') || itemLower.includes('biscotti') || itemLower.includes('crackers')) {
+            estimatedPrice = storePrices[storeName]?.['pane'] || 2.00;
+        } else if (itemLower.includes('latte') || itemLower.includes('yogurt') || itemLower.includes('formaggio')) {
+            estimatedPrice = storePrices[storeName]?.['latte'] || 1.50;
+        } else if (itemLower.includes('frutta') || itemLower.includes('verdura')) {
+            estimatedPrice = storePrices[storeName]?.['frutta'] || 3.00;
+        } else if (itemLower.includes('carne') || itemLower.includes('pollo') || itemLower.includes('pesce')) {
+            estimatedPrice = storePrices[storeName]?.['carne'] || 10.00;
+        } else if (itemLower.includes('acqua') || itemLower.includes('succo') || itemLower.includes('bevanda')) {
+            estimatedPrice = storePrices[storeName]?.['acqua'] || 0.50;
+        }
+        
+        return estimatedPrice;
+    }
     // ==================== SCREEN MANAGEMENT ====================
     function showScreen(screenName) {
     document.querySelectorAll('.screen').forEach(screen => {
@@ -3944,6 +4769,14 @@ function showOptimizationResults(solution) {
         updateDashboard();
     } else if (screenName === 'shopping') {
         renderShoppingList();
+        setTimeout(() => {
+        renderNearbyStores();
+        updateOptimizationPreview();  // 🔥 AGGIUNGI QUESTA RIGA
+    }, 100);
+        // 🔥 AGGIUNGI: Aggiorna prezzi quando torni alla lista
+        // setTimeout(() => {
+            // refreshShoppingListPrices();  // 🔥 COMMENTATO - non aggiorna automaticamente
+        // }, 100); 
         setTimeout(() => {
             renderNearbyStores();
         }, 100);
@@ -4378,17 +5211,38 @@ if (shoppingCountEl) {
         container.innerHTML += itemHTML;
     });
     
-    updateItemPrices();
+    // updateItemPrices();
 }
 
 // Nuova funzione per aggiustare la quantità
 function adjustQuantity(itemId, change) {
-    const item = shoppingList.find(i => i.id === itemId);
-    if (item) {
-        item.quantity = Math.max(1, (item.quantity || 1) + change);
-        // 🔥 SALVA I DATI
+    console.log(`📦 adjustQuantity per itemId: ${itemId}, change: ${change}`);
+    
+    // Trova l'item con QUEL preciso ID
+    const itemIndex = shoppingList.findIndex(i => i.id === itemId);
+    
+    if (itemIndex !== -1) {
+        const item = shoppingList[itemIndex];
+        const oldQty = item.quantity || 1;
+        const newQty = Math.max(1, oldQty + change);
+        
+        console.log(`   📊 Prima: ${item.name} @ ${item.bestStore} qty:${oldQty}`);
+        
+        // Modifica SOLO questo item, NON tutti quelli con lo stesso nome
+        shoppingList[itemIndex].quantity = newQty;
+        // 🔥 AGGIUNGI: Aggiorna il displayName con la nuova quantità
+        shoppingList[itemIndex].displayName = formatProductNameWithUnit(
+            item.name, 
+            newQty, 
+            item.unit || 'pz'
+        );
+        
+        console.log(`   📊 Dopo: ${item.name} @ ${item.bestStore} qty:${newQty}`);
+        
         saveAllData();
         renderShoppingList();
+    } else {
+        console.log(`❌ Item con id ${itemId} non trovato`);
     }
 }
 function showPriceCorrectionModal(itemId) {
@@ -4440,6 +5294,7 @@ function showPriceCorrectionModal(itemId) {
     document.body.appendChild(modal);
 }
 
+/*
 window.submitPriceCorrection = function(itemId) {
     const item = shoppingList.find(i => i.id === itemId);
     const newPrice = parseFloat(document.getElementById('correct-price').value);
@@ -4485,6 +5340,7 @@ window.submitPriceCorrection = function(itemId) {
     document.querySelector('.fixed').remove();
     showToast('✅ Prezzo corretto! Grazie per il contributo');
 };
+*/
 // ==================== QUI INSERISCI LA NUOVA FUNZIONE ====================
 window.submitPriceCorrectionWithStore = function(itemId) {
     const item = shoppingList.find(i => i.id === itemId);
@@ -4610,6 +5466,20 @@ function toggleShoppingItem(id) {
         renderShoppingList();
     }
 }
+function getAllStores() {
+    const allStores = [...(window.storesDatabase || []), ...(window.userStores || [])];
+    const uniqueStores = [];
+    const storeNames = new Set();
+    
+    allStores.forEach(store => {
+        if (store && store.name && !storeNames.has(store.name.toLowerCase())) {
+            storeNames.add(store.name.toLowerCase());
+            uniqueStores.push(store);
+        }
+    });
+    
+    return uniqueStores.sort((a, b) => a.name.localeCompare(b.name));
+}
 
 window.toggleShoppingItem = toggleShoppingItem;
 function showQuantityModal(itemName) {
@@ -4683,7 +5553,7 @@ function showQuantityModal(itemName) {
                 <label class="block text-sm font-medium mb-2">${t['price-optional']}</label>
                 <input type="number" step="0.01" id="modal-price" 
                        class="w-full p-3 border rounded-lg" 
-                       value="${defaultPrice}"
+                       value=""  // 🔥 ORA È VUOTO
                        placeholder="${t['price-optional']}">
                 <p class="text-xs text-gray-500 mt-1">${t['price-auto-hint']}</p>
             </div>
@@ -4769,110 +5639,6 @@ window.closeQuantityModal = function() {
 };
 
 // ==================== NUOVA FUNZIONE PER CONFERMA CON NEGOZIO ====================
-window.confirmQuantityWithStore = function(itemName) {
-    console.log('3️⃣ confirmQuantityWithStore chiamata con', itemName);
-    const lang = userProfile?.language || 'it';
-    const t = getTranslations(lang);
-    
-    // 🔍 DEBUG: controlla se gli elementi esistono
-    const storeSelect = document.getElementById('modal-store-select');
-    console.log('   storeSelect trovato?', storeSelect !== null);
-    
-    if (!storeSelect) {
-        console.log('   ❌ storeSelect NON TROVATO!');
-        showToast(t['store-not-found'] || 'Errore: selettore negozio non trovato');
-        return;
-    }
-    
-    const selectedStore = storeSelect.value;
-    console.log('   selectedStore:', selectedStore);
-    
-    const priceInput = document.getElementById('modal-price');
-    console.log('   priceInput trovato?', priceInput !== null);
-    
-    const customPrice = priceInput ? parseFloat(priceInput.value) : null;
-    console.log('   customPrice:', customPrice);
-    
-    const quantity = window.currentQuantity || 1;
-    console.log('   quantity:', quantity);
-    
-    if (!selectedStore) {
-        console.log('   ❌ Nessun negozio selezionato');
-        showToast(`⚠️ ${t['select-store-warning'] || 'Seleziona un negozio'}`);
-        return;
-    }
-    
-    if (selectedStore === '__new__') {
-        console.log('   ➕ Aggiungi nuovo negozio');
-        closeQuantityModal();
-        showNewStoreModalWithProduct(itemName, quantity, customPrice);
-        return;
-    }
-    
-    console.log('   ✅ Procedo con l\'aggiunta del prodotto');
-    closeQuantityModal();
-    
-    // 🔥 SALVA SEMPRE IL PREZZO NEL DATABASE
-    if (customPrice && customPrice > 0) {
-        console.log('   💰 Con prezzo personalizzato:', customPrice);
-        saveUserPrice(itemName, selectedStore, customPrice, {
-            source: 'manual',
-            confidence: 1.0
-        });
-        
-        // Aggiungi il prodotto
-        shoppingList.push({
-            id: Date.now(),
-            name: itemName,
-            quantity: quantity,
-            checked: false,
-            bestPrice: customPrice,
-            bestStore: selectedStore,
-            selectedStore: selectedStore,
-            prices: [{
-                price: customPrice,
-                store: selectedStore,
-                source: 'user',
-                confidence: 1.0
-            }],
-            recognized: true,
-            source: 'user',
-            confidence: 1.0
-        });
-        
-        console.log('   ✅ Prodotto aggiunto con prezzo personalizzato');
-        renderShoppingList();
-        showToast(`✅ ${itemName} x${quantity} aggiunto - ${formatCurrency(customPrice * quantity)} @ ${selectedStore}`);
-        
-    } else {
-        console.log('   🔍 Senza prezzo personalizzato, chiamo getBestPrice per', selectedStore);
-        
-        // Usa getBestPrice ma FORZA il negozio
-        getBestPrice(itemName, selectedStore).then(bestPrice => {
-            console.log('   🏷️ Prezzo ottenuto:', bestPrice.price, '@', bestPrice.store);
-            
-            shoppingList.push({
-                id: Date.now(),
-                name: itemName,
-                quantity: quantity,
-                checked: false,
-                bestPrice: bestPrice.price,
-                bestStore: bestPrice.store,
-                selectedStore: selectedStore,
-                prices: [bestPrice],
-                recognized: true,
-                source: bestPrice.source,
-                confidence: bestPrice.confidence
-            });
-            
-            console.log('   ✅ Prodotto aggiunto con prezzo automatico');
-            renderShoppingList();
-            showToast(`✅ ${itemName} x${quantity} aggiunto - ${formatCurrency(bestPrice.price * quantity)} @ ${bestPrice.store}`);
-        });
-        return; // Evita doppio render
-    }
-};
-// ==================== CONFERMA CON UNITÀ DI MISURA ====================
 window.confirmQuantityWithUnit = function(itemName) {
     console.log('3️⃣ confirmQuantityWithUnit chiamata con', itemName);
     const lang = userProfile?.language || 'it';
@@ -4907,77 +5673,115 @@ window.confirmQuantityWithUnit = function(itemName) {
     
     closeQuantityModal();
     
-    // SALVA SEMPRE IL PREZZO NEL DATABASE
+    // 🔍 CERCA se esiste già un record con lo stesso nome E STESSO negozio
+    const existingItem = shoppingList.find(item => 
+        item.name === itemName && 
+        (item.selectedStore || item.bestStore) === selectedStore &&
+        !item.checked
+    );
+    
+    console.log('🔍 existingItem:', existingItem ? `Trovato @ ${existingItem.selectedStore || existingItem.bestStore} (qty:${existingItem.quantity})` : 'Nessuno');
+    
+    // Funzione per aggiornare UI
+    const finalizeAdd = () => {
+        renderShoppingList();
+        const input = document.getElementById('shopping-item');
+        if (input) input.value = '';
+        saveAllData();
+        // 🔥 AGGIUNGI QUI
+        exposeGlobals();
+    };
+    
+    // CASO 1: Con prezzo personalizzato
     if (customPrice && customPrice > 0) {
         saveUserPrice(itemName, selectedStore, customPrice, {
             source: 'manual',
             confidence: 1.0
         });
         
-        // Aggiungi il prodotto con l'unità di misura
-        shoppingList.push({
-            id: Date.now(),
-            name: itemName,
-            quantity: quantity,
-            unit: selectedUnit, // <-- NUOVO CAMPO
-            displayName: formatProductNameWithUnit(itemName, quantity, selectedUnit),
-            checked: false,
-            bestPrice: customPrice,
-            bestStore: selectedStore,
-            selectedStore: selectedStore,
-            prices: [{
-                price: customPrice,
-                store: selectedStore,
-                source: 'user',
-                confidence: 1.0
-            }],
-            recognized: true,
-            source: 'user',
-            confidence: 1.0
-        });
-        
-        renderShoppingList();
-
-         // 🔥 SVUOTA L'INPUT QUI
-         const input = document.getElementById('shopping-item');
-        if (input) {
-            input.value = '';
-            console.log('✅ Input svuotato da confirmQuantityWithUnit');
-        }
-        showToast(`✅ ${formatProductNameWithUnit(itemName, quantity, selectedUnit)} aggiunto - ${formatCurrency(customPrice * quantity)} @ ${selectedStore}`);
-        
-    } else {
-        // Usa getBestPrice ma FORZA il negozio
-        getBestPrice(itemName, selectedStore).then(bestPrice => {
-            shoppingList.push({
+        if (existingItem) {
+            // ✅ TROVATO: aumenta quantità, MAI cambiare prezzo/negozio
+            existingItem.quantity = (existingItem.quantity || 1) + quantity;
+            // 🔥 AGGIUNGI: Aggiorna il displayName con la nuova quantità
+        existingItem.displayName = formatProductNameWithUnit(
+            existingItem.name, 
+            existingItem.quantity, 
+            existingItem.unit || 'pz'
+        );
+            console.log(`📦 Quantità aumentata: ${itemName} @ ${selectedStore} ora x${existingItem.quantity}`);
+            finalizeAdd();
+            showToast(`📦 ${itemName} ora x${existingItem.quantity} @ ${selectedStore}`);
+        } else {
+            // ❌ NON TROVATO: nuovo record
+            const newItem = {
                 id: Date.now(),
                 name: itemName,
                 quantity: quantity,
-                unit: selectedUnit, // <-- NUOVO CAMPO
+                unit: selectedUnit,
                 displayName: formatProductNameWithUnit(itemName, quantity, selectedUnit),
                 checked: false,
-                bestPrice: bestPrice.price,
-                bestStore: bestPrice.store,
+                bestPrice: customPrice,
+                bestStore: selectedStore,
                 selectedStore: selectedStore,
-                prices: [bestPrice],
+                prices: [{
+                    price: customPrice,
+                    store: selectedStore,
+                    source: 'user',
+                    confidence: 1.0
+                }],
                 recognized: true,
-                source: bestPrice.source,
-                confidence: bestPrice.confidence
-            });
+                source: 'user',
+                confidence: 1.0
+            };
+            shoppingList.push(newItem);
+            console.log('➕ Nuovo record:', newItem);
+            finalizeAdd();
+            showToast(`✅ ${formatProductNameWithUnit(itemName, quantity, selectedUnit)} @ ${selectedStore}`);
+        }
+        
+    // CASO 2: Senza prezzo personalizzato
+    } else {
+        getBestPrice(itemName, selectedStore).then(bestPrice => {
+            console.log(`   🏷️ Prezzo ottenuto:`, bestPrice);
             
-            renderShoppingList();
-
-            // 🔥 SVUOTA L'INPUT QUI
-            const input = document.getElementById('shopping-item');
-            if (input) {
-                input.value = '';
-                console.log('✅ Input svuotato da confirmQuantityWithUnit (senza prezzo)');
+            if (existingItem) {
+                // ✅ TROVATO: aumenta quantità, MAI cambiare prezzo/negozio
+                existingItem.quantity = (existingItem.quantity || 1) + quantity;
+                // 🔥 AGGIUNGI: Aggiorna il displayName con la nuova quantità
+            existingItem.displayName = formatProductNameWithUnit(
+                existingItem.name, 
+                existingItem.quantity, 
+                existingItem.unit || 'pz'
+            );
+                console.log(`📦 Quantità aumentata: ${itemName} @ ${selectedStore} ora x${existingItem.quantity}`);
+                finalizeAdd();
+                showToast(`📦 ${itemName} ora x${existingItem.quantity} @ ${selectedStore}`);
+            } else {
+                // ❌ NON TROVATO: nuovo record
+                const newItem = {
+                    id: Date.now(),
+                    name: itemName,
+                    quantity: quantity,
+                    unit: selectedUnit,
+                    displayName: formatProductNameWithUnit(itemName, quantity, selectedUnit),
+                    checked: false,
+                    bestPrice: bestPrice.price,
+                    bestStore: bestPrice.store,
+                    selectedStore: selectedStore,
+                    prices: [bestPrice],
+                    recognized: true,
+                    source: bestPrice.source,
+                    confidence: bestPrice.confidence
+                };
+                shoppingList.push(newItem);
+                console.log('➕ Nuovo record:', newItem);
+                finalizeAdd();
+                showToast(`✅ ${formatProductNameWithUnit(itemName, quantity, selectedUnit)} @ ${bestPrice.store}`);
             }
-            showToast(`✅ ${formatProductNameWithUnit(itemName, quantity, selectedUnit)} aggiunto - ${formatCurrency(bestPrice.price * quantity)} @ ${bestPrice.store}`);
         });
-        return;
     }
 };
+
 // ==================== FORMATTA NOME PRODOTTO CON UNITÀ ====================
 function formatProductNameWithUnit(name, quantity, unit) {
     const lang = userProfile?.language || 'it';
@@ -5090,47 +5894,47 @@ function registerAllPurchases() {
             const newPrice = parseFloat(document.getElementById(`price-${itemId}`).value);
             const newStore = document.getElementById(`store-${itemId}`).value.trim();
             
-            // Se l'utente ha modificato prezzo o negozio, salva nel database
-            if (newPrice && newPrice > 0) {
-                saveUserPrice(item.name, newStore || item.bestStore || 'Negozio', newPrice, {
+            // 🔥 MODIFICATO: Salva SEMPRE i prezzi modificati
+            if (newPrice && newPrice > 0 && newStore) {
+                saveUserPrice(item.name, newStore, newPrice, {
                     source: 'purchase',
                     confidence: 1.0
                 });
-                
-                // Aggiorna l'item con i nuovi valori
-                item.bestPrice = newPrice;
-                item.bestStore = newStore || item.bestStore;
+            } else if (newPrice && newPrice > 0) {
+                // Solo prezzo, negozio non modificato
+                saveUserPrice(item.name, item.bestStore || 'Negozio', newPrice, {
+                    source: 'purchase',
+                    confidence: 1.0
+                });
             }
             
-            // Crea la transazione
+            // Usa il prezzo modificato o quello esistente
+            const finalPrice = (newPrice && newPrice > 0) ? newPrice : item.bestPrice;
+            const finalStore = newStore || item.bestStore || 'Negozio';
+            
             transactions.push({
                 id: Date.now() + registered,
-                amount: (newPrice || item.bestPrice) * (item.quantity || 1),
-                description: `${t['expense-description'] || 'Spesa:'} ${item.name}${item.quantity > 1 ? ' x' + item.quantity : ''} (${newStore || item.bestStore || t['store-generic'] || 'Negozio'})`,
-                category: t['food'] || 'Alimentari',
+                amount: finalPrice * (item.quantity || 1),
+                description: `${item.name}${item.quantity > 1 ? ' x' + item.quantity : ''} @ ${finalStore}`,
+                category: 'Alimentari',
                 type: 'uscita',
                 date: new Date().toISOString().split('T')[0],
                 product: item.name,
-                store: newStore || item.bestStore || 'Negozio'
+                store: finalStore
             });
             
-            // Rimuovi l'articolo dalla lista (o lascialo se vuoi)
+            // 🔥 MODIFICATO: Rimuovi SOLO dopo aver salvato tutto
             shoppingList = shoppingList.filter(i => i.id !== itemId);
-            
             registered++;
         }
     });
     
     if (registered > 0) {
-    saveAllData();
-    const lang = userProfile?.language || 'it';
-    const t = getTranslations(lang);
-    showToast(`✅ ${registered} ${t['purchases-registered'] || 'acquisti registrati!'}`);
-    // 🔥 FORZA L'AGGIORNAMENTO DELLE OTTIMIZZAZIONI
-    updateOptimizationPreview();
-    showScreen('shopping');
-    renderShoppingList();
-    }   
+        saveAllData();
+        showToast(`✅ ${registered} ${t['purchases-registered'] || 'acquisti registrati!'}`);
+        showScreen('shopping');
+        renderShoppingList();
+    }
 }
 // ==================== SCANSIONE SCONTRINO ====================
 function scanReceipt() {
@@ -5842,11 +6646,7 @@ function saveProfile() {
         }
     }
     // Rendi accessibili globalmente per debug
-    window.transactions = transactions;
     window.renderReports = renderReports;
-    window.shoppingList = shoppingList;
-    window.budget = budget;
-    window.userProfile = userProfile;
 
 
     // ==================== STORE FUNCTIONS - CORRETTE ====================
@@ -6027,33 +6827,7 @@ async function renderNearbyStores() {
         searchBtn.disabled = false;
     }
 }
-    // Funzione per stimare il prezzo di un prodotto non nel database
-    function estimatePriceForItem(itemName, storeName) {
-        const itemLower = itemName.toLowerCase();
-        
-        // Prima cerca nel database dei prezzi
-        if (storePrices[storeName] && storePrices[storeName][itemLower]) {
-            return storePrices[storeName][itemLower];
-        }
-        
-        // Se non trovato, cerca prodotti simili
-        let estimatedPrice = 5.00; // Prezzo di default
-        
-        // Cerca per categorie simili
-        if (itemLower.includes('pane') || itemLower.includes('biscotti') || itemLower.includes('crackers')) {
-            estimatedPrice = storePrices[storeName]?.['pane'] || 2.00;
-        } else if (itemLower.includes('latte') || itemLower.includes('yogurt') || itemLower.includes('formaggio')) {
-            estimatedPrice = storePrices[storeName]?.['latte'] || 1.50;
-        } else if (itemLower.includes('frutta') || itemLower.includes('verdura')) {
-            estimatedPrice = storePrices[storeName]?.['frutta'] || 3.00;
-        } else if (itemLower.includes('carne') || itemLower.includes('pollo') || itemLower.includes('pesce')) {
-            estimatedPrice = storePrices[storeName]?.['carne'] || 10.00;
-        } else if (itemLower.includes('acqua') || itemLower.includes('succo') || itemLower.includes('bevanda')) {
-            estimatedPrice = storePrices[storeName]?.['acqua'] || 0.50;
-        }
-        
-        return estimatedPrice;
-    }
+    
 
     // Mostra consigli di ottimizzazione
     function showOptimizationTips() {
@@ -8627,10 +9401,12 @@ const OFF_CONFIG = {
     CACHE_DURATION: 7 * 24 * 60 * 60 * 1000 // 7 giorni
 };
 
-// Cache locale
-let productCache = JSON.parse(localStorage.getItem('productCache') || '{}');
-let userPriceDB = JSON.parse(localStorage.getItem('userPriceDB') || '{}');
-let priceStats = JSON.parse(localStorage.getItem('priceStats') || '{}');
+
+
+// Rendi globali per debug
+window.productCache = productCache;
+window.userPriceDB = userPriceDB;
+window.priceStats = priceStats;
 
 // Funzioni di cache
 function saveCache() {
@@ -8678,85 +9454,69 @@ async function searchProduct(query) {
     }
 }
 
-/**
- * Salva prezzo inserito dall'utente
- */
-function saveUserPrice(productName, storeName, price, options = {}) {
-    const lang = userProfile?.language || 'it';
-    const t = getTranslations(lang);
-    const key = `${productName.toLowerCase()}_${storeName}`;
-    
-    if (!userPriceDB[key]) {
-        userPriceDB[key] = [];
-    }
-    
-    userPriceDB[key].push({
-        price: price,
-        date: new Date().toISOString(),
-        userId: userProfile?.email || 'anonimo',
-        source: options.source || 'manual',
-        confidence: options.confidence || 0.9
-    });
-    
-    // Aggiorna statistiche
-    if (!priceStats[productName]) {
-        priceStats[productName] = { count: 0, sum: 0, min: price, max: price };
-    }
-    const stats = priceStats[productName];
-    stats.count++;
-    stats.sum += price;
-    stats.min = Math.min(stats.min, price);
-    stats.max = Math.max(stats.max, price);
-    stats.average = stats.sum / stats.count;
-    
-    saveCache();
-    showToast(`💰 ${t['price-saved-toast'] || 'Prezzo salvato!'}`);
-    
-    return true;
-}
+
 
 /**
- * Ottieni miglior prezzo per un prodotto
+ * Sincronizza shoppingList con i prezzi salvati nel database
+ * Mantiene i prezzi specifici per ogni negozio
  */
- async function getBestPrice(productName, storeName = null) {
-    const productLower = productName.toLowerCase();
-    let prices = [];
+ function syncShoppingListWithPriceDB() {
+    console.log('🔄 Sincronizzazione shoppingList con userPriceDB...');
+    console.log('📦 shoppingList PRIMA:', shoppingList.map(i => ({
+        name: i.name,
+        store: i.selectedStore || i.bestStore,
+        price: i.bestPrice,
+        qty: i.quantity
+    })));
     
-    // Cerca nel database utente
-    for (const [key, entries] of Object.entries(userPriceDB)) {
-        if (key.includes(productLower)) {
-            const lastEntry = entries[entries.length - 1];
-            if (!storeName || key.includes(storeName.toLowerCase())) {
-                prices.push({
-                    price: lastEntry.price,
-                    store: key.split('_')[1],
-                    source: 'user',
-                    confidence: 0.9 + (entries.length * 0.02),
-                    date: lastEntry.date,
-                    isEstimated: false  // ✅ Prezzo reale
-                });
+    shoppingList.forEach(item => {
+        if (!item.checked) {
+            const productName = item.name.toLowerCase().trim();
+            const itemStore = (item.selectedStore || item.bestStore || '').toLowerCase().trim();
+            
+            // 🔥 Cerca nel database un prezzo per QUESTO specifico prodotto E QUESTO specifico negozio
+            let foundPrice = null;
+            let foundStore = null;
+            let foundDate = null;
+            
+            for (const [key, entries] of Object.entries(userPriceDB)) {
+                const [dbProduct, dbStore] = key.split('_');
+                
+                if (dbProduct === productName && dbStore === itemStore && entries.length > 0) {
+                    const lastEntry = entries[entries.length - 1];
+                    foundPrice = lastEntry.price;
+                    foundStore = dbStore;
+                    foundDate = lastEntry.date;
+                    console.log(`   ✅ Trovato: ${dbProduct} @ ${dbStore} = ${foundPrice}`);
+                    break;
+                }
+            }
+            
+            // Se abbiamo trovato un prezzo per questo specifico negozio, aggiorna SOLO questo item
+            if (foundPrice !== null) {
+                item.bestPrice = foundPrice;
+                item.bestStore = foundStore;
+                item.source = 'user';
+                item.confidence = 1.0;
+                console.log(`   ✅ ${item.name} @ ${foundStore} aggiornato a: ${foundPrice}`);
+            } else {
+                console.log(`   ℹ️ Nessun prezzo trovato per ${item.name} @ ${itemStore}, lascio ${item.bestPrice}`);
             }
         }
-    }
-    
-    // Se non trovato, prezzo stimato
-    if (prices.length === 0) {
-        prices.push({
-            price: estimatePrice(productName),
-            store: 'Prezzo stimato',
-            source: 'estimate',
-            confidence: 0.5,
-            isEstimated: true  // ⚠️ Prezzo stimato
-        });
-    }
-    
-    // Ordina per prezzo e confidence
-    prices.sort((a, b) => {
-        if (a.price !== b.price) return a.price - b.price;
-        return b.confidence - a.confidence;
     });
     
-    return prices[0];
+    console.log('📦 shoppingList DOPO:', shoppingList.map(i => ({
+        name: i.name,
+        store: i.selectedStore || i.bestStore,
+        price: i.bestPrice,
+        qty: i.quantity
+    })));
+    
+    saveAllData();
+    renderShoppingList();
+
+    // 🔥 AGGIUNGI QUI
+    exposeGlobals();
 }
 
 /**
@@ -8786,7 +9546,8 @@ window.searchProduct = searchProduct;
 window.getBestPrice = getBestPrice;
 window.saveUserPrice = saveUserPrice;
 window.showPriceCorrectionModal = showPriceCorrectionModal;
-window.submitPriceCorrection = submitPriceCorrection;
+window.submitPriceCorrectionWithStore = submitPriceCorrectionWithStore;  // 🔥 NUOVA (attiva)
+// window.submitPriceCorrection = submitPriceCorrection;
 
 console.log('✅ Funzioni prezzi attaccate a window');
 // ==================== PERSISTENZA DATI ====================
@@ -8810,13 +9571,11 @@ function loadAllData() {
             console.log(`✅ ${transactions.length} transazioni caricate`);
         }
         
-        // Carica lista spesa - SOLO SE NON CI SONO GIÀ DATI IN MEMORIA
+        // Carica lista spesa
         const savedShoppingList = localStorage.getItem('smart_billing_shopping');
-        if (savedShoppingList && shoppingList.length === 0) {
+        if (savedShoppingList) {
             shoppingList = JSON.parse(savedShoppingList);
             console.log(`✅ ${shoppingList.length} articoli in lista caricati`);
-        } else if (shoppingList.length > 0) {
-            console.log(`ℹ️ Lista spesa già presente in memoria (${shoppingList.length} articoli), non sovrascrivo`);
         }
         
         // Carica budget
@@ -8826,12 +9585,22 @@ function loadAllData() {
             console.log('✅ Budget caricato');
         }
         
-        // Carica prezzi utente
         const savedPrices = localStorage.getItem('userPriceDB');
-        if (savedPrices) {
-            userPriceDB = JSON.parse(savedPrices);
-            console.log('✅ Database prezzi caricato');
-        }
+if (savedPrices) {
+    userPriceDB = JSON.parse(savedPrices);
+    console.log('✅ Database prezzi caricato');
+    
+    // 🔥 Aggiungi un piccolo ritardo prima di sincronizzare
+    if (shoppingList.length > 0) {
+        setTimeout(() => {
+            syncShoppingListWithPriceDB();
+        }, 100);
+        // 🔥 AGGIUNGI QUESTO - DOPO la sincronizzazione, aggiorna le ottimizzazioni
+    setTimeout(() => {
+        updateOptimizationPreview();
+    }, 200);
+    }
+}
         
         // Carica negozi utente
         const savedStores = localStorage.getItem('userStores');
@@ -8839,6 +9608,8 @@ function loadAllData() {
             window.userStores = JSON.parse(savedStores);
             console.log(`✅ ${window.userStores.length} negozi utente caricati`);
         }
+        // 🔥 AGGIUNGI QUI
+        exposeGlobals();
         
         console.log('✅ TUTTI I DATI CARICATI CON SUCCESSO');
     } catch (e) {
@@ -8855,6 +9626,9 @@ function saveAllData() {
         localStorage.setItem('smart_billing_budget', JSON.stringify(budget));
         localStorage.setItem('userPriceDB', JSON.stringify(userPriceDB));
         localStorage.setItem('userStores', JSON.stringify(window.userStores));
+
+        // 🔥 AGGIUNGI QUI - DOPO aver salvato tutto
+        exposeGlobals();
         
         console.log('✅ Tutti i dati salvati');
         return true;
@@ -8878,18 +9652,100 @@ function resetAllData() {
             Bollette: 0,
             Trasporti: 0,
             Svago: 0,
-            Salute: 0
+            Salute: 0,
+            Altro: 0  // 🔥 AGGIUNTO
         };
         userPriceDB = {};
         window.userStores = [];
         
         saveAllData();
+
+        // 🔥 AGGIUNGI QUI
+        exposeGlobals();
         
         showToast(`🗑️ ${t['reset-all-data'] || 'Tutti i dati cancellati'}`);
         showScreen('dashboard');
     }
 }
 
+/**
+ * Rimuove i prodotti duplicati dalla lista della spesa
+ * Mantiene solo un'occorrenza per ogni prodotto/negozio
+ */
+ function removeDuplicateItems() {
+    console.log('🧹 Pulizia duplicati...');
+    
+    if (!shoppingList || shoppingList.length === 0) {
+        console.log('📭 Lista vuota, niente da pulire');
+        return;
+    }
+    
+    console.log(`📊 Prima: ${shoppingList.length} articoli`);
+    
+    const uniqueItems = [];
+    const seen = new Set();
+    
+    // Ordina per ID (più recenti prima)
+    const sorted = [...shoppingList].sort((a, b) => b.id - a.id);
+    
+    sorted.forEach(item => {
+        // Crea una chiave unica: nome + negozio + stato
+        const key = `${item.name.toLowerCase()}_${item.selectedStore || item.bestStore}_${item.checked}`;
+        
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueItems.push(item);
+        } else {
+            console.log(`🗑️ Rimosso duplicato: ${item.name} (${item.bestPrice} @ ${item.bestStore})`);
+        }
+    });
+    
+    // Riordina per ID crescente
+    shoppingList = uniqueItems.sort((a, b) => a.id - b.id);
+    
+    console.log(`📊 Dopo: ${shoppingList.length} articoli`);
+    saveAllData();
+    renderShoppingList();
+
+    // 🔥 AGGIUNGI QUI
+    exposeGlobals();
+    
+    return shoppingList.length;
+}
+// 🔥 AGGIUNGI QUESTA FUNZIONE per aggiornare prezzi quando si torna alla lista
+// 🔥 COMMENTA TUTTA QUESTA FUNZIONE
+/*
+function refreshShoppingListPrices() {
+    console.log('🔄 Aggiornamento prezzi shoppingList...');
+    
+    shoppingList.forEach(async (item, index) => {
+        if (!item.checked) {
+            const bestPrice = await getBestPrice(item.name);
+            shoppingList[index].bestPrice = bestPrice.price;
+            shoppingList[index].bestStore = bestPrice.store;
+            shoppingList[index].source = bestPrice.source;
+            shoppingList[index].confidence = bestPrice.confidence;
+        }
+    });
+    
+    saveAllData();
+    renderShoppingList();
+}
+*/
+// Modifica showScreen per aggiornare prezzi quando si torna alla lista
+/*
+const originalShowScreen = showScreen;
+showScreen = function(screenName) {
+    originalShowScreen(screenName);
+    
+    if (screenName === 'shopping') {
+        // 🔥 AGGIUNGI: Aggiorna prezzi quando torni alla lista
+        setTimeout(() => {
+            refreshShoppingListPrices();
+        }, 100);
+    }
+};
+*/
     // ==================== INITIALIZE ====================
     function initApp() {
     console.log('🚀 === INIZIALIZZAZIONE APP ===');
@@ -9002,7 +9858,7 @@ function resetAllData() {
     // 5. Inizializza app
     console.log('🔄 Inizializzazione componenti...');
     updateDashboard();
-    updateItemPrices();
+    // updateItemPrices();
     
     // 🔥 FORZA UN SECONDO CARICAMENTO DOPO 500ms (per iOS)
     setTimeout(() => {
@@ -9011,15 +9867,20 @@ function resetAllData() {
         updateDashboard();
         renderShoppingList();
         renderRecentTransactions();
+        updateOptimizationPreview();  // 🔥 AGGIUNGI QUESTA RIGA
     }, 500);
+
+        // 🔥 AGGIUNGI ALLA FINE
+        exposeGlobals();
     
     console.log('✅ APP INIZIALIZZATA');
     console.log('🌍 LINGUA FINALE:', userProfile.language);
 }
 
 // 🔥 FIX PER iOS HOME SCREEN - AGGIUNGI DOPO initApp()
+// 🔥 COMMENTA ANCHE QUESTO
+/*
 window.addEventListener('pageshow', function(event) {
-    // Se la pagina viene caricata dalla cache (tipico di iOS)
     if (event.persisted) {
         console.log('📱 Pagina caricata dalla cache (iOS home screen) - ricarico dati');
         loadAllData();
@@ -9028,8 +9889,11 @@ window.addEventListener('pageshow', function(event) {
         renderRecentTransactions();
     }
 });
+*/
 
 // 🔥 FIX PER QUANDO L'APP VIENE RIPORTATA IN PRIMO PIANO
+// 🔥 COMMENTA TUTTO QUESTO BLOCCO
+/*
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
         console.log('📱 App tornata in primo piano - ricarico dati');
@@ -9039,6 +9903,7 @@ document.addEventListener('visibilitychange', function() {
         renderRecentTransactions();
     }
 });
+*/
 
 // 🔥 SALVA I DATI PRIMA CHE L'APP VENGA CHIUSA (opzionale)
 window.addEventListener('beforeunload', function() {
@@ -9059,6 +9924,16 @@ function debugProfile() {
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
+window.transactions = transactions;
+window.shoppingList = shoppingList;
+window.budget = budget;
+window.userProfile = userProfile;
+window.renderReports = renderReports;
+window.saveAllData = saveAllData;
+window.renderBudget = renderBudget;
+window.userPriceDB = userPriceDB;
+window.productCache = productCache;
+window.priceStats = priceStats;
 </script>
 </body>
 </html>
