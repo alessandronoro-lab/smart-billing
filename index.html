@@ -1632,10 +1632,14 @@ async function analyzeReceiptWithAzure(imageFile) {
         formData.append('file', imageFile);
         
         // Chiamata API a Azure
-        const response = await fetch(`${AZURE_OCR_ENDPOINT}documentintelligence/documentModels/prebuilt-receipt:analyze?api-version=2024-02-29-preview`, {
+         // 🔥 PROXY CORS
+         const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        const targetUrl = `${window.AZURE_OCR_ENDPOINT}documentintelligence/documentModels/prebuilt-receipt:analyze?api-version=2024-02-29-preview`;
+        
+        const response = await fetch(proxyUrl + targetUrl, {
             method: 'POST',
             headers: {
-                'Ocp-Apim-Subscription-Key': AZURE_OCR_KEY
+                'Ocp-Apim-Subscription-Key': window.AZURE_OCR_KEY
             },
             body: formData
         });
