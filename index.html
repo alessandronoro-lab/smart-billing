@@ -402,17 +402,22 @@
                                 <i class="fas fa-lightbulb"></i> <span data-translate="suggestion">Suggerimento</span>: <span id="expense-suggested-category-text"></span>
                             </p>
                     </div>
-                    <!-- NEGOZIO (OPZIONALE) -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2" data-translate="store-optional">Negozio (opzionale)</label>
-                <select id="expense-store-select" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    onchange="handleExpenseStoreChange(this)">  <!-- 🔥 AGGIUNTO onchange -->
-                    <option value="">-- Generico --</option>
-                    <!-- I negozi verranno popolati da JavaScript -->
-                </select>
-                <p class="text-xs text-gray-500 mt-1" data-translate="store-hint">Seleziona un negozio o lascia vuoto per "Generico"</p>
-            </div>
-            <!-- FINE BLOCCO NEGOZO -->
+                    <!-- NEGOZIO (OPZIONALE) - MODIFICATO CON MATITA -->
+<div>
+<div class="flex justify-between items-center mb-2">
+    <label class="block text-sm font-medium text-gray-700" data-translate="store-optional">Negozio (opzionale)</label>
+    <button type="button" onclick="showEditStoreModalFromExpense()" 
+            class="text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1">
+        <i class="fas fa-pencil-alt"></i> <span data-translate="edit-store">Modifica negozio</span>
+    </button>
+</div>
+<select id="expense-store-select" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+        onchange="handleExpenseStoreChange(this)">
+    <option value="">-- Generico --</option>
+    <!-- I negozi verranno popolati da JavaScript con indirizzo -->
+</select>
+<p class="text-xs text-gray-500 mt-1" data-translate="store-hint">Seleziona un negozio o lascia vuoto per "Generico"</p>
+</div>
                     <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2" data-translate="amount-with-currency">Importo (€) *</label>
                         <input type="number" step="0.01" id="expense-amount" 
@@ -3845,8 +3850,9 @@ async function addAsIs(productName) {
 function calculateFewestStoresSolution(items) {
     console.log('🔍 DEBUG - calculateFewestStoresSolution chiamata con items:', items.map(i => ({
         name: i.name,
-        quantity: i.quantity || 1,
-        unit: i.unit || 'pz'  // 🔥 Aggiunto unità nel log
+        store: i.bestStore,
+        price: i.bestPrice,
+        quantity: i.quantity
     })));
     
     if (items.length === 0) {
@@ -3861,12 +3867,11 @@ function calculateFewestStoresSolution(items) {
 
     // Raccogli le quantità totali per ogni prodotto
     const productQuantities = {};
-    const productUnits = {}; // 🔥 NUOVO: mappa per salvare l'unità di ogni prodotto
+    const productUnits = {};
     
     items.forEach(item => {
         const productName = item.name;
         productQuantities[productName] = (productQuantities[productName] || 0) + (item.quantity || 1);
-        // 🔥 Salva l'unità del primo item trovato
         if (!productUnits[productName]) {
             productUnits[productName] = item.unit || 'pz';
         }
@@ -3875,7 +3880,7 @@ function calculateFewestStoresSolution(items) {
     console.log('📦 Quantità totali per prodotto:', productQuantities);
     console.log('📦 Unità per prodotto:', productUnits);
     
-    // 🔥 Determina la posizione corrente
+    // Determina la posizione corrente
     let userLocation = null;
     if (currentLocationType === 'home' && userProfile?.homeCity) {
         userLocation = userProfile.homeCity;
@@ -3885,26 +3890,20 @@ function calculateFewestStoresSolution(items) {
     console.log('📍 Posizione corrente:', userLocation || 'non specificata');
     
     // Costruisci una mappa di tutti i negozi che hanno questi prodotti
-    // Formato: { storeName: { productName: price } }
     const storeProducts = {};
     const allProductNames = Object.keys(productQuantities);
     
     // Cerca nel database prezzi (userPriceDB)
     Object.entries(userPriceDB).forEach(([key, entries]) => {
-        // La chiave è nel formato "nomeprodotto_negozio"
         const [productName, storeName] = key.split('_');
         
-        // Se questo prodotto è nella lista attuale
         if (allProductNames.includes(productName) && entries.length > 0) {
-            // Prendi l'ultimo prezzo (più recente)
             const lastEntry = entries[entries.length - 1];
             
-            // 🔥 Verifica se il negozio è una catena nazionale
             const isNationalChain = NATIONAL_CHAINS.some(chain => 
                 storeName.toLowerCase().includes(chain)
             );
             
-            // 🔥 Verifica la posizione del negozio (se disponibile)
             const storeCity = storeLocations[storeName];
             const locationMatch = !userLocation || isNationalChain || 
                                  (storeCity && storeCity === userLocation);
@@ -3913,26 +3912,48 @@ function calculateFewestStoresSolution(items) {
                 if (!storeProducts[storeName]) {
                     storeProducts[storeName] = {};
                 }
-                
-                // Salva il prezzo per questo prodotto in questo negozio
                 storeProducts[storeName][productName] = lastEntry.price;
             }
         }
     });
+    // 🔥 AGGIUNGI QUI - Includi anche i negozi dalla lista corrente
+items.forEach(item => {
+    const store = item.bestStore;
+    if (store && store !== 'Prezzo stimato') {
+        if (!storeProducts[store]) {
+            storeProducts[store] = {};
+        }
+        // Salva il prezzo corrente dell'item se non già presente
+        if (!storeProducts[store][item.name]) {
+            storeProducts[store][item.name] = item.bestPrice;
+        }
+    }
+});
     
     console.log('🏪 Negozi con prodotti disponibili:', storeProducts);
     
     const allStores = Object.keys(storeProducts);
     console.log('📋 Tutti i negozi disponibili:', allStores);
     
+    // 🔥 Calcola i negozi unici dalla lista originale (fallback)
+    const uniqueStoresFromItems = [...new Set(items.map(i => i.bestStore))];
+    console.log('🏪 Negozi unici dalla lista:', uniqueStoresFromItems);
+    
     if (allStores.length === 0) {
-        console.log('⚠️ Nessun negozio trovato nel database per la posizione corrente');
+        console.log('⚠️ Nessun negozio trovato nel database, uso i negozi della lista');
+        const totalPrice = items.reduce((sum, item) => sum + ((item.bestPrice || 0) * (item.quantity || 1)), 0);
         return {
-            totalPrice: items.reduce((sum, item) => sum + ((item.bestPrice || 0) * (item.quantity || 1)), 0),
-            storeCount: 0,
-            stores: [],
-            items: [],
-            itemsByStore: {}
+            totalPrice: totalPrice,
+            storeCount: uniqueStoresFromItems.length, // 🔥 CORRETTO!
+            stores: uniqueStoresFromItems,
+            items: items.map(item => ({
+                name: item.name,
+                store: item.bestStore,
+                price: item.bestPrice,
+                quantity: item.quantity || 1,
+                unit: item.unit || 'pz'
+            })),
+            itemsByStore: {} // Vuoto perché non abbiamo dati per negozio
         };
     }
     
@@ -3940,7 +3961,7 @@ function calculateFewestStoresSolution(items) {
     let bestStoreCount = Infinity;
     let bestTotalPrice = Infinity;
     
-    // Prova tutte le combinazioni di negozi (da 1 a tutti i negozi)
+    // Prova tutte le combinazioni di negozi
     for (let numStores = 1; numStores <= allStores.length; numStores++) {
         console.log(`\n🔍 Provo combinazioni con ${numStores} negozi:`);
         const combinations = getStoreCombinationsArray(allStores, numStores);
@@ -3948,13 +3969,11 @@ function calculateFewestStoresSolution(items) {
         for (const storeCombo of combinations) {
             console.log(`\n   📍 Test combinazione:`, storeCombo);
             
-            // Verifica se questa combinazione copre tutti i prodotti
             let allProductsCovered = true;
             let totalPrice = 0;
             const productAssignments = {};
             const storesUsed = new Set();
             
-            // Per ogni prodotto, trova il miglior prezzo tra i negozi della combinazione
             allProductNames.forEach(productName => {
                 console.log(`      Prodotto: ${productName}`);
                 let bestPriceForProduct = Infinity;
@@ -3994,7 +4013,6 @@ function calculateFewestStoresSolution(items) {
             if (allProductsCovered) {
                 console.log(`   ✅ Combinazione ${storeCombo} copre TUTTI i prodotti! Totale: ${totalPrice}, Negozi usati: ${storesUsed.size}`);
                 
-                // Criteri: meno negozi è meglio, a parità di negozi vince il prezzo più basso
                 if (storesUsed.size < bestStoreCount || 
                     (storesUsed.size === bestStoreCount && totalPrice < bestTotalPrice)) {
                     
@@ -4002,7 +4020,6 @@ function calculateFewestStoresSolution(items) {
                     bestStoreCount = storesUsed.size;
                     bestTotalPrice = totalPrice;
                     
-                    // Costruisci la soluzione con i dettagli
                     const itemsList = [];
                     const itemsByStore = {};
                     
@@ -4011,7 +4028,6 @@ function calculateFewestStoresSolution(items) {
                     });
                     
                     Object.entries(productAssignments).forEach(([productName, assignment]) => {
-                        // 🔥 Prendi l'unità salvata per questo prodotto
                         const unit = productUnits[productName] || 'pz';
                         
                         itemsList.push({
@@ -4019,7 +4035,7 @@ function calculateFewestStoresSolution(items) {
                             store: assignment.store,
                             price: assignment.price,
                             quantity: assignment.quantity,
-                            unit: unit,  // 🔥 Aggiungi unità
+                            unit: unit,
                             total: assignment.total
                         });
                         
@@ -4027,7 +4043,7 @@ function calculateFewestStoresSolution(items) {
                             name: productName,
                             price: assignment.price,
                             quantity: assignment.quantity,
-                            unit: unit,  // 🔥 Aggiungi unità
+                            unit: unit,
                             total: assignment.total
                         });
                     });
@@ -4051,21 +4067,38 @@ function calculateFewestStoresSolution(items) {
         return bestSolution;
     }
     
-    // Fallback: se non trova nessuna combinazione, usa i prezzi correnti degli item
-    console.log('⚠️ Nessuna combinazione ottimale trovata, uso fallback');
+    // Fallback: usa i negozi della lista originale
+    console.log('⚠️ Nessuna combinazione ottimale trovata, uso fallback con negozi della lista');
     const totalPrice = items.reduce((sum, item) => sum + ((item.bestPrice || 0) * (item.quantity || 1)), 0);
+    
+    // 🔥 Raggruppa per negozio per il fallback
+    const itemsByStore = {};
+    items.forEach(item => {
+        const store = item.bestStore;
+        if (!itemsByStore[store]) {
+            itemsByStore[store] = [];
+        }
+        itemsByStore[store].push({
+            name: item.name,
+            price: item.bestPrice,
+            quantity: item.quantity || 1,
+            unit: item.unit || 'pz',
+            total: (item.bestPrice || 0) * (item.quantity || 1)
+        });
+    });
+    
     return {
         totalPrice: totalPrice,
-        storeCount: items.length,
-        stores: [...new Set(items.map(i => i.bestStore))],
+        storeCount: uniqueStoresFromItems.length,
+        stores: uniqueStoresFromItems,
         items: items.map(item => ({
             name: item.name,
             store: item.bestStore,
             price: item.bestPrice,
             quantity: item.quantity || 1,
-            unit: item.unit || 'pz'  // 🔥 Aggiungi unità
+            unit: item.unit || 'pz'
         })),
-        itemsByStore: {}  // 🔥 Aggiunto itemsByStore vuoto
+        itemsByStore: itemsByStore
     };
 }
     // ==================== OPTIMIZATION ALGORITHMS ====================
@@ -4994,24 +5027,15 @@ function estimatePriceForItem(itemName, storeName) {
     // Converti in array e ordina per nome
     const uniqueStores = Object.values(storesByName).sort((a, b) => a.name.localeCompare(b.name));
     
+    // 🔥 SOLO opzioni principali con indirizzo (niente opzioni di modifica)
     uniqueStores.forEach(store => {
-        // Crea un contenitore visivo per ogni negozio (non è un vero optgroup, ma un'opzione con stile)
-        const mainOption = document.createElement('option');
-        mainOption.value = store.name;
-        mainOption.textContent = store.name + (store.address ? ` - ${store.address}` : '');
-        storeSelect.appendChild(mainOption);
-        
-        // 🔥 NUOVO: Opzione per modificare il negozio (come opzione separata)
-        const editOption = document.createElement('option');
-        editOption.value = `__edit__${store.name}`;
-        editOption.textContent = `   ✏️ ${store.name} (modifică)`;
-        editOption.style.paddingLeft = '20px';
-        editOption.style.color = '#3b82f6';
-        editOption.style.fontStyle = 'italic';
-        storeSelect.appendChild(editOption);
+        const option = document.createElement('option');
+        option.value = store.name;
+        option.textContent = store.name + (store.address ? ` - ${store.address}` : '');
+        storeSelect.appendChild(option);
     });
     
-    // 🔥 AGGIUNGI: Opzione per aggiungere nuovo negozio
+    // 🔥 Opzione per aggiungere nuovo negozio
     const newStoreOption = document.createElement('option');
     newStoreOption.value = '__new__';
     newStoreOption.textContent = '➕ Adaugă magazin';
@@ -5030,10 +5054,23 @@ function handleExpenseStoreChange(select) {
     } else if (value.startsWith('__edit__')) {
         const storeName = value.replace('__edit__', '');
         select.value = '';
-        showEditStoreModal(storeName);
+        showEditStoreModal(storeName, 'expense'); // 🔥 Passa 'expense' come source
     }
 }
-function showEditStoreModal(storeName) {
+// 🔥 NUOVA FUNZIONE - QUI, SUBITO DOPO handleExpenseStoreChange
+function showEditStoreModalFromExpense() {
+    const storeSelect = document.getElementById('expense-store-select');
+    const selectedStore = storeSelect?.value;
+    
+    if (!selectedStore || selectedStore === '' || selectedStore === '__new__') {
+        showToast('⚠️ Seleziona prima un negozio da modificare');
+        return;
+    }
+    
+    showEditStoreModal(selectedStore, 'expense'); // 🔥 Passa 'expense' come source
+}
+
+function showEditStoreModal(storeName, source = 'generic') {
     // Cerca il negozio in tutti i database
     const allStores = getAllStores();
     const store = allStores.find(s => s.name === storeName);
@@ -5048,6 +5085,8 @@ function showEditStoreModal(storeName) {
     
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    modal.setAttribute('data-source', source); // 🔥 Salva la fonte
+    
     modal.innerHTML = `
         <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
             <h3 class="text-xl font-bold mb-4">✏️ ${t['edit-store'] || 'Modifica negozio'}</h3>
@@ -5107,7 +5146,7 @@ function showEditStoreModal(storeName) {
                 </div>
                 
                 <div class="flex gap-3 pt-4">
-                    <button onclick="saveEditedStore('${storeName}')" 
+                    <button onclick="saveEditedStore('${storeName}', '${source}')" 
                             class="flex-1 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600">
                         <i class="fas fa-save mr-2"></i>${t['save-store'] || 'Salva modifiche'}
                     </button>
@@ -5123,7 +5162,7 @@ function showEditStoreModal(storeName) {
     document.body.appendChild(modal);
 }
 // 🔥 AGGIUNGI QUESTA NUOVA FUNZIONE - SALVA NEGOZIO MODIFICATO
-function saveEditedStore(oldStoreName) {
+function saveEditedStore(oldStoreName, source = 'generic') {
     const newStoreName = document.getElementById('edit-store-name').value.trim();
     const storeAddress = document.getElementById('edit-store-address').value.trim();
     const city = document.getElementById('edit-store-city').value.trim();
@@ -5192,17 +5231,57 @@ function saveEditedStore(oldStoreName) {
         storeLocations[newStoreName] = city;
         localStorage.setItem('storeLocations', JSON.stringify(storeLocations));
         
-        // Ricarica il select
+        // Ricarica il select delle spese generiche
         loadStoresIntoSelect();
         
-        // Chiudi il modal
-        document.querySelector('.fixed').remove();
+        // 🔥 Se la modifica viene dal modal della lista spesa, aggiorna anche quel select
+        if (source === 'shopping') {
+            const shoppingSelect = document.getElementById('modal-store-select');
+            if (shoppingSelect) {
+                const allStores = getAllStores();
+                // Salva il valore attualmente selezionato
+                const currentValue = shoppingSelect.value;
+                
+                shoppingSelect.innerHTML = '<option value="">-- Seleziona un negozio --</option>';
+                allStores.forEach(store => {
+                    const option = document.createElement('option');
+                    option.value = store.name;
+                    option.textContent = store.name + (store.address ? ` - ${store.address}` : '');
+                    shoppingSelect.appendChild(option);
+                });
+                // Aggiungi opzione nuovo negozio
+                const newOption = document.createElement('option');
+                newOption.value = '__new__';
+                newOption.textContent = '➕ Adaugă magazin';
+                shoppingSelect.appendChild(newOption);
+                
+                // Ripristina la selezione se il negozio esiste ancora
+                if (allStores.some(s => s.name === currentValue)) {
+                    shoppingSelect.value = currentValue;
+                } else if (allStores.some(s => s.name === newStoreName)) {
+                    shoppingSelect.value = newStoreName;
+                }
+            }
+        }
+        
+        // 🔥 Chiudi il modal di modifica (cerca specificamente quello con data-source)
+        const editModal = document.querySelector('.fixed[data-source]');
+        if (editModal) {
+            editModal.remove();
+        } else {
+            // Fallback: chiudi qualsiasi modal con classe .fixed
+            const modal = document.querySelector('.fixed');
+            if (modal) modal.remove();
+        }
         
         showToast(`✅ Negozio "${newStoreName}" aggiornato!`);
     } else {
         showToast('❌ Errore nel salvare le modifiche');
     }
 }
+// Rendi globale
+window.saveEditedStore = saveEditedStore;
+
 // 🔥 AGGIUNGI QUESTA NUOVA FUNZIONE - MODAL SEMPLIFICATO PER NEGOZIO
 function showNewStoreModalExpense() {
     console.log('🔥 APERTO MODAL EXPENSE');
@@ -5803,55 +5882,58 @@ if (shoppingCountEl) {
             `<span class="text-xs text-gray-400">${t['searching-prices'] || 'Cerca prezzi...'}</span>`;
         
         const unrecognizedBadge = !item.recognized ? 
-            `<span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">${t['unrecognized'] || 'Non riconosciuto'}</span>` : '';
+            `<span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded whitespace-nowrap">${t['unrecognized'] || 'Non riconosciuto'}</span>` : '';
         
         const confidenceBadge = item.confidence ? 
             (item.confidence > 0.8 ? 
-                '<span class="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">✅</span>' : 
-                '<span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">⚠️</span>') : '';
+                '<span class="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded whitespace-nowrap">✅</span>' : 
+                '<span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded whitespace-nowrap">⚠️</span>') : '';
         
+        // 🔥 VERSIONE RESPONSIVE CON flex-wrap
         const itemHTML = `
-            <div class="flex items-center justify-between p-3 border rounded-lg">
-                <div class="flex items-center gap-3">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-3">
+                <div class="flex items-start gap-3 w-full sm:w-auto">
                     <button onclick="toggleShoppingItem(${item.id})" 
-                            class="w-8 h-8 rounded border-2 border-gray-300 flex items-center justify-center hover:border-green-500">
+                            class="w-8 h-8 rounded border-2 border-gray-300 flex items-center justify-center hover:border-green-500 flex-shrink-0">
                         <i class="fas fa-shopping-cart text-gray-400"></i>
                     </button>
-                    <div>
-                        <div class="flex items-center">
-                            <span class="font-medium">${item.displayName || item.name}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center flex-wrap gap-1">
+                            <span class="font-medium truncate">${item.displayName || item.name}</span>
                             ${unrecognizedBadge}
                             ${confidenceBadge}
                         </div>
-                        <div class="flex items-center gap-2 mt-1">
+                        <div class="flex items-center gap-2 mt-1 flex-wrap">
                             ${priceInfo}
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <div class="flex items-center border rounded-lg mr-2">
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end ml-auto flex-wrap">
+                    <div class="flex items-center border rounded-lg flex-shrink-0">
                         <button onclick="adjustQuantity(${item.id}, -1)" 
                                 class="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-l-lg">
                             <i class="fas fa-minus text-xs"></i>
                         </button>
-                        <span class="px-3 py-1 text-sm font-medium border-x" id="qty-${item.id}">${item.quantity || 1}</span>
+                        <span class="px-3 py-1 text-sm font-medium border-x min-w-[40px] text-center" id="qty-${item.id}">${item.quantity || 1}</span>
                         <button onclick="adjustQuantity(${item.id}, 1)" 
                                 class="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-r-lg">
                             <i class="fas fa-plus text-xs"></i>
                         </button>
                     </div>
-                    <button onclick="showPriceDetails(${item.id})" 
-                            class="px-3 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200">
-                        <i class="fas fa-chart-bar mr-1"></i>${t['price-button'] || 'Prezzi'}
-                    </button>
-                    <button onclick="showPriceCorrectionModal(${item.id})" 
-                            class="px-3 py-1 text-xs bg-green-100 text-green-600 rounded hover:bg-green-200">
-                        <i class="fas fa-pencil-alt mr-1"></i>${t['correct-price'] || 'Correggi'}
-                    </button>
-                    <button onclick="removeShoppingItem(${item.id})" 
-                            class="text-red-500 hover:text-red-700">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <div class="flex gap-1 flex-wrap justify-end">
+                        <button onclick="showPriceDetails(${item.id})" 
+                                class="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 whitespace-nowrap">
+                            <i class="fas fa-chart-bar mr-1"></i>${t['price-button'] || 'Prezzi'}
+                        </button>
+                        <button onclick="showPriceCorrectionModal(${item.id})" 
+                                class="px-2 py-1 text-xs bg-green-100 text-green-600 rounded hover:bg-green-200 whitespace-nowrap">
+                            <i class="fas fa-pencil-alt mr-1"></i>${t['correct-price'] || 'Correggi'}
+                        </button>
+                        <button onclick="removeShoppingItem(${item.id})" 
+                                class="px-2 py-1 text-red-500 hover:text-red-700 whitespace-nowrap">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -5860,8 +5942,7 @@ if (shoppingCountEl) {
     
     // updateItemPrices();
     updateListTypeDisplay();
-    updateDeletedItemsCounter(); // 🔥 AGGIUNGI QUI
-
+    updateDeletedItemsCounter();
 }
 
 // Nuova funzione per aggiustare la quantità
@@ -6352,22 +6433,21 @@ function getAllStores() {
 }
 
 window.toggleShoppingItem = toggleShoppingItem;
+
 function showQuantityModal(itemName) {
     console.log('2️⃣ showQuantityModal chiamata con', itemName);
     const lang = userProfile?.language || 'it';
     const t = getTranslations(lang);
-    const currencySymbol = userProfile?.currencySymbol || 'lei'; // 🔥 Valuta corretta
+    const currencySymbol = userProfile?.currencySymbol || 'lei';
     
     // Prendi sempre i negozi aggiornati
     const allStores = getAllStores();
     
+    // 🔥 Genera opzioni negozi con possibilità di modifica
+    const storeOptions = generateStoreOptionsForShopping();
+    
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
-    
-    // Crea le option per i negozi
-    const storeOptions = allStores.map(store => 
-        `<option value="${store.name}">${store.name}</option>`
-    ).join('');
     
     // Opzioni per le unità di misura
     const unitOptions = `
@@ -6393,7 +6473,7 @@ function showQuantityModal(itemName) {
         <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
             <h3 class="text-xl font-bold mb-4">${t['add-product-title'].replace('{product}', itemName)}</h3>
             
-            <!-- 🔥 Quantità con pulsanti + e - e campo editabile -->
+            <!-- Quantità con pulsanti + e - e campo editabile -->
             <div class="mb-4">
                 <label class="block text-sm font-medium mb-2">${t['quantity']}</label>
                 <div class="flex items-center justify-center gap-2">
@@ -6424,9 +6504,125 @@ function showQuantityModal(itemName) {
                 </select>
             </div>
 
-            <!-- Negozio -->
+            <!-- 🔥 Negozio con opzioni di modifica -->
             <div class="mb-4">
                 <label class="block text-sm font-medium mb-2">${t['store']}</label>
+                <select id="modal-store-select" class="w-full p-3 border rounded-lg" 
+                        onchange="handleShoppingStoreSelect(this, '${itemName}')">
+                    <option value="">${t['select-store']}</option>
+                    ${storeOptions}
+                    <option value="__new__">${t['add-new-store']}</option>
+                </select>
+            </div>
+
+            <!-- Prezzo con etichetta dinamica e valuta corretta -->
+            <div id="price-field-container" class="mb-4 hidden">
+                <label class="block text-sm font-medium mb-2">${t['price']} <span id="price-unit-label">(${currencySymbol})</span></label>
+                <input type="number" step="any" id="modal-price" 
+                       class="w-full p-3 border rounded-lg" 
+                       placeholder="${t['enter-price'] || 'Inserisci il prezzo'}">
+                <p id="price-hint" class="text-xs text-gray-500 mt-1"></p>
+            </div>
+
+            <!-- Pulsanti -->
+            <div class="flex gap-3 pt-4">
+                <button onclick="confirmQuantityAdvanced('${itemName}')" 
+                        class="flex-1 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600">
+                    <i class="fas fa-check mr-2"></i>${t['confirm']}
+                </button>
+                <button onclick="closeQuantityModal()" 
+                        class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                    ${t['cancel']}
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    window.currentItemName = itemName;
+}
+function showQuantityModal(itemName) {
+    console.log('2️⃣ showQuantityModal chiamata con', itemName);
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    const currencySymbol = userProfile?.currencySymbol || 'lei';
+    
+    // Prendi sempre i negozi aggiornati
+    const allStores = getAllStores();
+    
+    // 🔥 Genera opzioni negozi con indirizzo (SENZA opzioni di modifica nel menu)
+    const storeOptions = allStores.map(store => 
+        `<option value="${store.name}">${store.name}${store.address ? ` - ${store.address}` : ''}</option>`
+    ).join('');
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    
+    // Opzioni per le unità di misura
+    const unitOptions = `
+        <option value="pz">${t['piece'] || 'pezzo/i'}</option>
+        <option value="kg">${t['kg'] || 'kg'}</option>
+        <option value="g">${t['g'] || 'g'}</option>
+        <option value="l">${t['l'] || 'l'}</option>
+        <option value="ml">${t['ml'] || 'ml'}</option>
+        <option value="bottiglia">${t['bottle'] || 'bottiglia/e'}</option>
+        <option value="confezione">${t['pack'] || 'confezione/i'}</option>
+    `;
+    
+    // Opzioni per tipo di prezzo
+    const priceTypeOptions = `
+        <option value="unit">${t['price-per-unit'] || 'Prezzo per unità'}</option>
+        <option value="kg">${t['price-per-kg'] || 'Prezzo al kg'}</option>
+        <option value="g">${t['price-per-100g'] || 'Prezzo per 100g'}</option>
+        <option value="l">${t['price-per-liter'] || 'Prezzo al litro'}</option>
+        <option value="ml">${t['price-per-100ml'] || 'Prezzo per 100ml'}</option>
+    `;
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <h3 class="text-xl font-bold mb-4">${t['add-product-title'].replace('{product}', itemName)}</h3>
+            
+            <!-- Quantità con pulsanti + e - e campo editabile -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">${t['quantity']}</label>
+                <div class="flex items-center justify-center gap-2">
+                    <button onclick="adjustQuantityModal(-0.1)" 
+                            class="w-12 h-12 bg-gray-200 rounded-full text-2xl font-bold hover:bg-gray-300">-</button>
+                    <input type="number" id="modal-quantity" value="1" min="0.01" step="any" 
+                           class="w-24 p-3 border rounded-lg text-center text-lg font-bold"
+                           onchange="updateQuantityDisplay()">
+                    <button onclick="adjustQuantityModal(0.1)" 
+                            class="w-12 h-12 bg-gray-200 rounded-full text-2xl font-bold hover:bg-gray-300">+</button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1 text-center">${t['enter-quantity'] || 'Inserisci o usa i pulsanti'}</p>
+            </div>
+
+            <!-- UNITÀ DI MISURA con reset quantità -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">${t['unit'] || 'Unità di misura'}</label>
+                <select id="modal-unit" class="w-full p-3 border rounded-lg" onchange="onUnitChange()">
+                    ${unitOptions}
+                </select>
+            </div>
+
+            <!-- TIPO DI PREZZO (appare se unità è kg, g, l, ml) -->
+            <div id="price-type-container" class="mb-4 hidden">
+                <label class="block text-sm font-medium mb-2">${t['price-type'] || 'Tipo di prezzo'}</label>
+                <select id="modal-price-type" class="w-full p-3 border rounded-lg" onchange="updatePriceLabel()">
+                    ${priceTypeOptions}
+                </select>
+            </div>
+
+            <!-- 🔥 NEGOZIO CON MATITA A FIANCO -->
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="block text-sm font-medium">${t['store']}</label>
+                    <button type="button" onclick="showEditStoreModalFromShopping('${itemName}')" 
+                            class="text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1">
+                        <i class="fas fa-pencil-alt"></i> ${t['edit-store'] || 'Modifica negozio'}
+                    </button>
+                </div>
                 <select id="modal-store-select" class="w-full p-3 border rounded-lg" 
                         onchange="handleStoreSelectDirect(this, '${itemName}')">
                     <option value="">${t['select-store']}</option>
@@ -6461,6 +6657,57 @@ function showQuantityModal(itemName) {
     document.body.appendChild(modal);
     
     window.currentItemName = itemName;
+}
+
+// 🔥 Nuova funzione per aprire modifica negozio dal modal della lista spesa
+function showEditStoreModalFromShopping(itemName) {
+    const storeSelect = document.getElementById('modal-store-select');
+    const selectedStore = storeSelect?.value;
+    
+    if (!selectedStore || selectedStore === '' || selectedStore === '__new__') {
+        showToast('⚠️ Seleziona prima un negozio da modificare');
+        return;
+    }
+    
+    showEditStoreModal(selectedStore, 'shopping'); // 🔥 Passa 'shopping' come source
+}
+// 🔥 Genera opzioni negozi con possibilità di modifica
+function generateStoreOptionsForShopping() {
+    const allStores = getAllStores();
+    
+    // Raggruppa per nome
+    const storesByName = {};
+    allStores.forEach(store => {
+        if (!storesByName[store.name]) {
+            storesByName[store.name] = store;
+        }
+    });
+    
+    const uniqueStores = Object.values(storesByName).sort((a, b) => a.name.localeCompare(b.name));
+    
+    let options = '';
+    uniqueStores.forEach(store => {
+        // Opzione principale
+        options += `<option value="${store.name}">${store.name}${store.address ? ` - ${store.address}` : ''}</option>`;
+        // Opzione di modifica (indentata)
+        options += `<option value="__edit__${store.name}" style="padding-left: 20px; color: #3b82f6; font-style: italic;">   ✏️ ${store.name} (modifică)</option>`;
+    });
+    
+    return options;
+}
+
+// 🔥 Gestisce la selezione nel modal della lista spesa
+function handleShoppingStoreSelect(select, itemName) {
+    const value = select.value;
+    
+    if (value === '__new__') {
+        select.value = '';
+        showNewStoreModalWithProduct(itemName, window.currentQuantity || 1, 'pz');
+    } else if (value.startsWith('__edit__')) {
+        const storeName = value.replace('__edit__', '');
+        select.value = '';
+        showEditStoreModal(storeName);
+    }
 }
 // 2. NUOVA - adjustQuantityModal
 function adjustQuantityModal(delta) {
