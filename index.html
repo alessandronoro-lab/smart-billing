@@ -730,48 +730,57 @@
             </div> <!-- CHIUDE screen-shopping -->
     
             <!-- ==================== SCREEN 10: REGISTRA ACQUISTI ==================== -->
-<div id="screen-register-purchases" class="screen">
-<div class="mb-6">
-    <button onclick="showScreen('shopping')" 
-            class="flex items-center gap-2 text-gray-600 hover:text-gray-800">
-            <i class="fas fa-arrow-left"></i> <span data-translate="back-to-shopping-list">Torna alla Lista</span>
-        </button>
-</div>
-
-<div class="bg-white rounded-xl shadow p-6">
-    <h2 class="text-xl font-bold text-gray-800 mb-2">
-        <i class="fas fa-receipt text-green-500 mr-2"></i><span data-translate="register-purchases">Registra Acquisti</span>
-    </h2>
-    <p class="text-gray-500 mb-6" data-translate="modify-prices">Modifica prezzi e conferma gli acquisti</p>
-    
-    <!-- BOTTONE SCANSIONE SCONTRINO -->
-    <div class="mb-6">
-        <button onclick="scanReceipt()" 
-                class="w-full py-4 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-3 text-lg">
-            <i class="fas fa-camera fa-lg"></i> 
-            <span data-translate="scan-receipt">Scansiona scontrino con fotocamera</span>
-        </button>
-        <p class="text-xs text-gray-500 text-center mt-2" data-translate="camera-hint">
-            Usa la fotocamera per leggere automaticamente prezzi e prodotti
-        </p>
-    </div>
-    
-    <div id="purchases-to-register" class="space-y-4 mb-6">
-        <!-- Verrà popolato con gli articoli spuntati -->
-    </div>
-    
-    <div class="flex gap-3 pt-4">
-        <button onclick="registerAllPurchases()" 
-        class="flex-1 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600">
-    <i class="fas fa-check mr-2"></i> <span data-translate="confirm-purchases">Conferma Acquisti</span>
-</button>
-<button onclick="showScreen('shopping')" 
-        class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300">
-    <span data-translate="cancel">Annulla</span>
-</button>
-    </div>
-</div>
-</div>
+            <div id="screen-register-purchases" class="screen">
+            <div class="mb-6">
+                <button onclick="showScreen('shopping')" 
+                        class="flex items-center gap-2 text-gray-600 hover:text-gray-800">
+                        <i class="fas fa-arrow-left"></i> <span data-translate="back-to-shopping-list">Torna alla Lista</span>
+                    </button>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-2">
+                    <i class="fas fa-receipt text-green-500 mr-2"></i><span data-translate="register-purchases">Registra Acquisti</span>
+                </h2>
+                <p class="text-gray-500 mb-6" data-translate="modify-prices">Modifica prezzi e conferma gli acquisti</p>
+                
+                <!-- 🔥 DUE OPZIONI PER SCANSIONE -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <!-- Opzione 1: Fotocamera -->
+                    <button onclick="startCameraScan()" 
+                            class="p-4 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 flex flex-col items-center justify-center gap-2 h-32">
+                        <i class="fas fa-camera fa-2x"></i>
+                        <span data-translate="use-camera">Usa fotocamera</span>
+                    </button>
+                    
+                    <!-- Opzione 2: Carica foto -->
+                    <button onclick="uploadReceiptImage()" 
+                            class="p-4 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 flex flex-col items-center justify-center gap-2 h-32">
+                        <i class="fas fa-cloud-upload-alt fa-2x"></i>
+                        <span data-translate="upload-image">Carica immagine</span>
+                    </button>
+                </div>
+                
+                <p class="text-xs text-gray-500 text-center mb-6" data-translate="camera-hint">
+                    Usa la fotocamera o carica una foto per leggere automaticamente prezzi e prodotti
+                </p>
+                
+                <div id="purchases-to-register" class="space-y-4 mb-6">
+                    <!-- Verrà popolato con gli articoli spuntati -->
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <button onclick="registerAllPurchases()" 
+                    class="flex-1 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600">
+                <i class="fas fa-check mr-2"></i> <span data-translate="confirm-purchases">Conferma Acquisti</span>
+            </button>
+            <button onclick="showScreen('shopping')" 
+                    class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300">
+                <span data-translate="cancel">Annulla</span>
+            </button>
+                </div>
+            </div>
+            </div>
             
             <!-- ==================== SCREEN 6: GESTIONE BUDGET ==================== -->
         <div id="screen-budget" class="screen">
@@ -1086,6 +1095,11 @@
 
     <!-- JAVASCRIPT -->
     <script>
+        // ==================== AZURE OCR CONFIGURAZIONE (PRIMA DI TUTTO) ====================
+    // window.AZURE_OCR_ENDPOINT = 'https://smartbilling-ocr.cognitiveservices.azure.com/';
+    // window.AZURE_OCR_KEY = 'dd2479056629483abaaa790888dbb4f5';
+    // console.log('🔥 Azure configurato all\'inizio:', window.AZURE_OCR_ENDPOINT);
+
     // ========== DEBUG ERRORI ==========
     window.addEventListener('error', function(e) {
             console.error('🔥 ERRORE CATTURATO:', e.error);
@@ -1391,6 +1405,31 @@ const NATIONAL_CHAINS = [
 // (verrà popolata quando l'utente aggiunge un negozio)
 let storeLocations = JSON.parse(localStorage.getItem('storeLocations') || '{}');
 
+// 🔥 AGGIUNGI QUI LE CREDENZIALI AZURE - DOPO storeLocations e PRIMA di exposeGlobals()
+// ==================== AZURE OCR CONFIGURAZIONE ====================
+// const AZURE_OCR_ENDPOINT = 'https://smartbilling-ocr.cognitiveservices.azure.com/';
+// const AZURE_OCR_KEY = 'dd2479056629483abaaa790888dbb4f5';
+
+// 🔥 AGGIUNGI QUESTE DUE RIGHE PER RENDERE GLOBALI LE VARIABILI AZURE
+// window.AZURE_OCR_ENDPOINT = AZURE_OCR_ENDPOINT;
+// window.AZURE_OCR_KEY = AZURE_OCR_KEY;
+
+// console.log('✅ Azure configurato:', { 
+    // endpoint: AZURE_OCR_ENDPOINT,
+    // key: AZURE_OCR_KEY ? 'presente' : 'mancante' 
+// });
+
+// ==================== GARANZIA AZURE ====================
+// 🔥 INSERISCI QUI LA FUNZIONE - DOPO la configurazione e PRIMA di exposeGlobals()
+function ensureAzureConfig() {
+    if (!window.AZURE_OCR_ENDPOINT) {
+        window.AZURE_OCR_ENDPOINT = 'https://smartbilling-ocr.cognitiveservices.azure.com/';
+        window.AZURE_OCR_KEY = 'dd2479056629483abaaa790888dbb4f5';
+        console.log('⚠️ Azure configurato al volo in ensureAzureConfig');
+    }
+    return window.AZURE_OCR_ENDPOINT && window.AZURE_OCR_KEY;
+}
+
 // Rendi accessibili globalmente per debug
 window.shoppingList = shoppingList;
 window.userPriceDB = userPriceDB;
@@ -1399,6 +1438,10 @@ window.budget = budget;
 window.userProfile = userProfile;
 
 function exposeGlobals() {
+    // 🔥 SALVA AZURE PRIMA DI RESETTARE
+    const savedEndpoint = window.AZURE_OCR_ENDPOINT;
+    const savedKey = window.AZURE_OCR_KEY;
+
     window.shoppingList = shoppingList;
     window.userPriceDB = userPriceDB;
     window.transactions = transactions;
@@ -1406,7 +1449,13 @@ function exposeGlobals() {
     window.userProfile = userProfile;
     window.productCache = productCache;
     window.priceStats = priceStats;
-    console.log('🌍 Variabili esposte globalmente');
+    // 🔥 RIPRISTINA AZURE
+    if (savedEndpoint) {
+        window.AZURE_OCR_ENDPOINT = savedEndpoint;
+        window.AZURE_OCR_KEY = savedKey;
+    }
+    
+    console.log('🌍 Variabili esposte globalmente (Azure preservato)');
 }
 // 🔥 AGGIUNGI QUESTA RIGA - RENDE LA FUNZIONE GLOBALE
 window.exposeGlobals = exposeGlobals;
@@ -1565,6 +1614,314 @@ window.updateStoresFromOSM = async function(shops) {
     
     console.log(`🏪 Salvati ${window.storesDatabase.length} negozi da OSM con relative città`);
 };
+// ==================== FUNZIONI AZURE OCR ====================
+
+// Funzione per analizzare un'immagine/scontrino con Azure
+async function analyzeReceiptWithAzure(imageFile) {
+    // 🔥 Doppia protezione
+    if (!window.AZURE_OCR_ENDPOINT) {
+        window.AZURE_OCR_ENDPOINT = 'https://smartbilling-ocr.cognitiveservices.azure.com/';
+        window.AZURE_OCR_KEY = 'dd2479056629483abaaa790888dbb4f5';
+    }
+    ensureAzureConfig(); // 🔥 AGGIUNGI IN TESTA
+    console.log('🔍 Invio a Azure OCR...');
+    
+    try {
+        // Prepara il file per l'invio
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        
+        // Chiamata API a Azure
+        const response = await fetch(`${AZURE_OCR_ENDPOINT}documentintelligence/documentModels/prebuilt-receipt:analyze?api-version=2024-02-29-preview`, {
+            method: 'POST',
+            headers: {
+                'Ocp-Apim-Subscription-Key': AZURE_OCR_KEY
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Errore HTTP: ${response.status} - ${errorText}`);
+        }
+        
+        // Ottieni l'operation-location per il polling
+        const operationLocation = response.headers.get('operation-location');
+        console.log('📍 Operation location:', operationLocation);
+        
+        if (!operationLocation) {
+            throw new Error('Nessuna operation location ricevuta');
+        }
+        
+        // Polling per il risultato (Azure ci mette qualche secondo)
+        return await pollForResult(operationLocation);
+        
+    } catch (error) {
+        console.error('❌ Errore OCR:', error);
+        showToast(`❌ Errore durante l'analisi dello scontrino: ${error.message}`);
+        return null;
+    }
+}
+
+// Funzione di polling per ottenere il risultato
+async function pollForResult(operationLocation) {
+    for (let i = 0; i < 20; i++) { // 20 tentativi (circa 20 secondi)
+        // Aspetta 1 secondo tra un tentativo e l'altro
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        try {
+            const response = await fetch(operationLocation, {
+                headers: {
+                    'Ocp-Apim-Subscription-Key': AZURE_OCR_KEY
+                }
+            });
+            
+            if (!response.ok) continue;
+            
+            const result = await response.json();
+            
+            if (result.status === 'succeeded') {
+                console.log('✅ Analisi completata!');
+                return result.analyzeResult;
+            } else if (result.status === 'failed') {
+                throw new Error('Analisi fallita');
+            }
+            
+            console.log(`⏳ Attesa... tentativo ${i+1}/20`);
+            
+        } catch (e) {
+            console.log('Errore nel polling, riprovo...', e);
+        }
+    }
+    
+    throw new Error('Timeout nell\'attesa del risultato');
+}
+
+// Estrae i prodotti dallo scontrino Azure
+function extractItemsFromReceipt(azureResult) {
+    const items = [];
+    
+    if (!azureResult || !azureResult.documents || azureResult.documents.length === 0) {
+        console.log('⚠️ Nessun documento trovato nel risultato Azure');
+        return items;
+    }
+    
+    try {
+        // Azure restituisce i dati in una struttura specifica per scontrini
+        const receipt = azureResult.documents[0];
+        const fields = receipt.fields || {};
+        
+        // Estrae il nome del negozio (se disponibile)
+        let merchantName = 'Negozio sconosciuto';
+        if (fields.MerchantName && fields.MerchantName.valueString) {
+            merchantName = fields.MerchantName.valueString;
+        } else if (fields.MerchantName && fields.MerchantName.content) {
+            merchantName = fields.MerchantName.content;
+        }
+        
+        // Estrae la lista prodotti (Items)
+        if (fields.Items && fields.Items.valueArray) {
+            fields.Items.valueArray.forEach((item, index) => {
+                const itemObj = item.valueObject || {};
+                
+                // Estrai descrizione prodotto
+                let description = 'Prodotto sconosciuto';
+                if (itemObj.Description && itemObj.Description.valueString) {
+                    description = itemObj.Description.valueString;
+                } else if (itemObj.Description && itemObj.Description.content) {
+                    description = itemObj.Description.content;
+                }
+                
+                // Estrai quantità
+                let quantity = 1;
+                if (itemObj.Quantity && itemObj.Quantity.valueNumber) {
+                    quantity = itemObj.Quantity.valueNumber;
+                }
+                
+                // Estrai prezzo (TotalPrice o Price)
+                let price = 0;
+                if (itemObj.TotalPrice && itemObj.TotalPrice.valueNumber) {
+                    price = itemObj.TotalPrice.valueNumber;
+                } else if (itemObj.Price && itemObj.Price.valueNumber) {
+                    price = itemObj.Price.valueNumber;
+                }
+                
+                if (price > 0) {
+                    items.push({
+                        id: `receipt-${index}-${Date.now()}`,
+                        name: description.toLowerCase(),
+                        originalName: description,
+                        quantity: quantity,
+                        price: price,
+                        store: merchantName
+                    });
+                }
+            });
+        }
+        
+        console.log('📦 Prodotti estratti dallo scontrino:', items);
+        
+    } catch (error) {
+        console.error('❌ Errore nell\'estrazione prodotti:', error);
+    }
+    
+    return items;
+}
+
+// ==================== FUNZIONI ABBINAMENTO SCONTRINI ====================
+
+function showReceiptItemsForMatching(receiptItems) {
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
+    // Prendi i prodotti spuntati dalla lista
+    const checkedItems = shoppingList.filter(item => item.checked);
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    
+    let itemsHTML = '';
+    
+    // Mostra i prodotti dello scontrino
+    receiptItems.forEach((receiptItem, index) => {
+        itemsHTML += `
+            <div class="p-4 border rounded-lg mb-3 bg-yellow-50" data-receipt-id="${receiptItem.id}">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="font-semibold text-blue-800">🧾 ${receiptItem.originalName}</p>
+                        <p class="text-sm text-gray-600">${t['quantity'] || 'Quantità'}: ${receiptItem.quantity} | ${t['price'] || 'Prezzo'}: ${formatCurrency(receiptItem.price)}</p>
+                        <p class="text-xs text-gray-500">${t['store'] || 'Negozio'}: ${receiptItem.store}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <label class="block text-sm font-medium mb-1">${t['match-with'] || 'Abbina a prodotto in lista:'}</label>
+                    <select id="match-${index}" class="match-select w-full p-2 border rounded-lg mb-2" data-index="${index}">
+                        <option value="">-- ${t['new-product'] || 'Nuovo prodotto'} --</option>
+                        ${checkedItems.map(item => 
+                            `<option value="${item.id}" data-store="${item.bestStore}" data-name="${item.name}">${item.displayName || item.name} @ ${item.bestStore}</option>`
+                        ).join('')}
+                    </select>
+                    
+                    <div class="flex gap-2 mt-2">
+                        <input type="number" step="0.01" id="match-price-${index}" 
+                               class="flex-1 p-2 border rounded" 
+                               value="${receiptItem.price}" 
+                               placeholder="${t['price'] || 'Prezzo'}">
+                        <input type="text" id="match-store-${index}" 
+                               class="flex-1 p-2 border rounded" 
+                               value="${receiptItem.store}" 
+                               placeholder="${t['store'] || 'Negozio'}">
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    modal.innerHTML = `
+        <div class="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-xl font-bold">
+                    <i class="fas fa-receipt mr-2 text-green-500"></i>
+                    ${t['receipt-matching'] || 'Abbinamento prodotti scontrino'}
+                </h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto max-h-[60vh]">
+                ${itemsHTML || `<p class="text-center text-gray-500 py-8">${t['no-items'] || 'Nessun prodotto rilevato'}</p>`}
+            </div>
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                <button onclick="confirmReceiptMatching()" 
+                        class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">
+                    <i class="fas fa-check mr-2"></i>${t['confirm-matches'] || 'Conferma abbinamenti'}
+                </button>
+                <button onclick="this.closest('.fixed').remove()" 
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                    ${t['cancel'] || 'Annulla'}
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Rendi globale
+window.showReceiptItemsForMatching = showReceiptItemsForMatching;
+
+// Conferma gli abbinamenti e salva
+function confirmReceiptMatching() {
+    const modal = document.querySelector('.fixed');
+    if (!modal) return;
+    
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
+    const receiptItems = modal.querySelectorAll('[data-receipt-id]');
+    let updatedCount = 0;
+    let newCount = 0;
+    
+    receiptItems.forEach((itemDiv, index) => {
+        const select = document.getElementById(`match-${index}`);
+        const priceInput = document.getElementById(`match-price-${index}`);
+        const storeInput = document.getElementById(`match-store-${index}`);
+        
+        if (!select || !priceInput || !storeInput) return;
+        
+        const selectedOption = select.options[select.selectedIndex];
+        const matchedItemId = select.value;
+        const newPrice = parseFloat(priceInput.value);
+        const newStore = storeInput.value.trim();
+        
+        if (!newPrice || newPrice <= 0 || !newStore) return;
+        
+        if (matchedItemId) {
+            // Abbina a prodotto esistente
+            const item = shoppingList.find(i => i.id == matchedItemId);
+            if (item) {
+                // Salva il prezzo come scontrino (sostituisce i precedenti)
+                saveUserPrice(item.name, newStore, newPrice, {
+                    source: 'receipt',
+                    confidence: 1.0
+                });
+                
+                // Aggiorna l'item
+                item.bestPrice = newPrice;
+                item.bestStore = newStore;
+                item.selectedStore = newStore;
+                
+                updatedCount++;
+            }
+        } else {
+            // Nuovo prodotto - lo aggiungiamo alla lista dei prodotti spuntati
+            // per la registrazione (ma non alla lista principale)
+            newCount++;
+            
+            // Qui potresti aggiungere la logica per creare un item temporaneo
+            // da mostrare nella lista registrazione
+            console.log('🆕 Nuovo prodotto da scontrino:', {
+                name: 'Nuovo prodotto',
+                price: newPrice,
+                store: newStore
+            });
+        }
+    });
+    
+    modal.remove();
+    
+    // Aggiorna la lista
+    renderShoppingList();
+    
+    showToast(`✅ ${updatedCount} ${t['items-updated'] || 'prodotti aggiornati'}, ${newCount} ${t['new-items-detected'] || 'nuovi rilevati'}`);
+    
+    // Torna alla schermata di registrazione
+    showScreen('register-purchases');
+}
+
+// Rendi globale
+window.confirmReceiptMatching = confirmReceiptMatching;
 
 // ==================== FUNZIONI AGGIUNTIVE PER GESTIONE NEGOZI ====================
 
@@ -3705,12 +4062,12 @@ async function addAsIs(productName) {
     }
 
     function calculateLowestPriceSolution(items) {
-    console.log('🔍 CONTENUTO COMPLETO userPriceDB:', JSON.parse(JSON.stringify(userPriceDB)));
-    console.log('📊 Calcolo lowest price con items:', items.map(i => ({
-        name: i.name,
-        quantity: i.quantity || 1,
-        unit: i.unit || 'pz'  // 🔥 Aggiunto unità nel log
-    })));
+    // console.log('🔍 CONTENUTO COMPLETO userPriceDB:', JSON.parse(JSON.stringify(userPriceDB)));
+    // console.log('📊 Calcolo lowest price con items:', items.map(i => ({
+        // name: i.name,
+        // quantity: i.quantity || 1,
+        // unit: i.unit || 'pz'  // 🔥 Aggiunto unità nel log
+    // })));
     
     if (items.length === 0) {
         return {
@@ -3735,8 +4092,8 @@ async function addAsIs(productName) {
         }
     });
     
-    console.log('📦 Quantità totali per prodotto:', productQuantities);
-    console.log('📦 Unità per prodotto:', productUnits);
+    // console.log('📦 Quantità totali per prodotto:', productQuantities);
+    // console.log('📦 Unità per prodotto:', productUnits);
     
     // 🔥 Determina la posizione corrente
     let userLocation = null;
@@ -3745,7 +4102,7 @@ async function addAsIs(productName) {
     } else if (currentLocationType === 'work' && userProfile?.workCity) {
         userLocation = userProfile.workCity;
     }
-    console.log('📍 Posizione corrente:', userLocation || 'non specificata');
+    // console.log('📍 Posizione corrente:', userLocation || 'non specificata');
     
     // Trova il miglior prezzo per ogni prodotto nel database
     const bestPrices = {};
@@ -3779,7 +4136,7 @@ async function addAsIs(productName) {
         }
     });
     
-    console.log('🏷️ Migliori prezzi trovati nel database:', bestPrices);
+    // console.log('🏷️ Migliori prezzi trovati nel database:', bestPrices);
     
     let totalPrice = 0;
     const storesUsed = new Set();
@@ -3831,8 +4188,8 @@ async function addAsIs(productName) {
         });
     });
     
-    console.log('📊 itemsList:', itemsList);
-    console.log('📊 itemsByStore:', itemsByStore);
+    // console.log('📊 itemsList:', itemsList);
+    // console.log('📊 itemsByStore:', itemsByStore);
     
     const result = {
         totalPrice: totalPrice,
@@ -3848,12 +4205,12 @@ async function addAsIs(productName) {
 }
 
 function calculateFewestStoresSolution(items) {
-    console.log('🔍 DEBUG - calculateFewestStoresSolution chiamata con items:', items.map(i => ({
-        name: i.name,
-        store: i.bestStore,
-        price: i.bestPrice,
-        quantity: i.quantity
-    })));
+    // console.log('🔍 DEBUG - calculateFewestStoresSolution chiamata con items:', items.map(i => ({
+        // name: i.name,
+        // store: i.bestStore,
+        // price: i.bestPrice,
+        // quantity: i.quantity
+    //}))); 
     
     if (items.length === 0) {
         return {
@@ -3877,8 +4234,8 @@ function calculateFewestStoresSolution(items) {
         }
     });
     
-    console.log('📦 Quantità totali per prodotto:', productQuantities);
-    console.log('📦 Unità per prodotto:', productUnits);
+    // console.log('📦 Quantità totali per prodotto:', productQuantities);
+    // console.log('📦 Unità per prodotto:', productUnits);
     
     // Determina la posizione corrente
     let userLocation = null;
@@ -3887,7 +4244,7 @@ function calculateFewestStoresSolution(items) {
     } else if (currentLocationType === 'work' && userProfile?.workCity) {
         userLocation = userProfile.workCity;
     }
-    console.log('📍 Posizione corrente:', userLocation || 'non specificata');
+    //console.log('📍 Posizione corrente:', userLocation || 'non specificata');
     
     // Costruisci una mappa di tutti i negozi che hanno questi prodotti
     const storeProducts = {};
@@ -3930,17 +4287,17 @@ items.forEach(item => {
     }
 });
     
-    console.log('🏪 Negozi con prodotti disponibili:', storeProducts);
+    // console.log('🏪 Negozi con prodotti disponibili:', storeProducts);
     
     const allStores = Object.keys(storeProducts);
-    console.log('📋 Tutti i negozi disponibili:', allStores);
+    // console.log('📋 Tutti i negozi disponibili:', allStores);
     
     // 🔥 Calcola i negozi unici dalla lista originale (fallback)
     const uniqueStoresFromItems = [...new Set(items.map(i => i.bestStore))];
-    console.log('🏪 Negozi unici dalla lista:', uniqueStoresFromItems);
+    // console.log('🏪 Negozi unici dalla lista:', uniqueStoresFromItems);
     
     if (allStores.length === 0) {
-        console.log('⚠️ Nessun negozio trovato nel database, uso i negozi della lista');
+        // console.log('⚠️ Nessun negozio trovato nel database, uso i negozi della lista');
         const totalPrice = items.reduce((sum, item) => sum + ((item.bestPrice || 0) * (item.quantity || 1)), 0);
         return {
             totalPrice: totalPrice,
@@ -3963,11 +4320,11 @@ items.forEach(item => {
     
     // Prova tutte le combinazioni di negozi
     for (let numStores = 1; numStores <= allStores.length; numStores++) {
-        console.log(`\n🔍 Provo combinazioni con ${numStores} negozi:`);
+        // console.log(`\n🔍 Provo combinazioni con ${numStores} negozi:`);
         const combinations = getStoreCombinationsArray(allStores, numStores);
         
         for (const storeCombo of combinations) {
-            console.log(`\n   📍 Test combinazione:`, storeCombo);
+            // console.log(`\n   📍 Test combinazione:`, storeCombo);
             
             let allProductsCovered = true;
             let totalPrice = 0;
@@ -3975,20 +4332,20 @@ items.forEach(item => {
             const storesUsed = new Set();
             
             allProductNames.forEach(productName => {
-                console.log(`      Prodotto: ${productName}`);
+                // console.log(`      Prodotto: ${productName}`);
                 let bestPriceForProduct = Infinity;
                 let bestStoreForProduct = null;
                 
                 storeCombo.forEach(store => {
                     const price = storeProducts[store]?.[productName];
                     if (price) {
-                        console.log(`         - ${store}: prezzo ${price}`);
+                        // console.log(`         - ${store}: prezzo ${price}`);
                         if (price < bestPriceForProduct) {
                             bestPriceForProduct = price;
                             bestStoreForProduct = store;
                         }
                     } else {
-                        console.log(`         - ${store}: NON DISPONIBILE`);
+                        // console.log(`         - ${store}: NON DISPONIBILE`);
                     }
                 });
                 
@@ -4003,20 +4360,20 @@ items.forEach(item => {
                         quantity: totalQty,
                         total: productTotal
                     };
-                    console.log(`         ✅ Scelto ${bestStoreForProduct} a ${bestPriceForProduct} x ${totalQty} = ${productTotal}`);
+                    // console.log(`         ✅ Scelto ${bestStoreForProduct} a ${bestPriceForProduct} x ${totalQty} = ${productTotal}`);
                 } else {
-                    console.log(`         ❌ Nessun negozio disponibile per ${productName}`);
+                    // console.log(`         ❌ Nessun negozio disponibile per ${productName}`);
                     allProductsCovered = false;
                 }
             });
             
             if (allProductsCovered) {
-                console.log(`   ✅ Combinazione ${storeCombo} copre TUTTI i prodotti! Totale: ${totalPrice}, Negozi usati: ${storesUsed.size}`);
+                // console.log(`   ✅ Combinazione ${storeCombo} copre TUTTI i prodotti! Totale: ${totalPrice}, Negozi usati: ${storesUsed.size}`);
                 
                 if (storesUsed.size < bestStoreCount || 
                     (storesUsed.size === bestStoreCount && totalPrice < bestTotalPrice)) {
                     
-                    console.log(`   🏆 NUOVA MIGLIORE SOLUZIONE! (negozi: ${storesUsed.size}, prezzo: ${totalPrice})`);
+                    // console.log(`   🏆 NUOVA MIGLIORE SOLUZIONE! (negozi: ${storesUsed.size}, prezzo: ${totalPrice})`);
                     bestStoreCount = storesUsed.size;
                     bestTotalPrice = totalPrice;
                     
@@ -4057,18 +4414,18 @@ items.forEach(item => {
                     };
                 }
             } else {
-                console.log(`   ❌ Combinazione ${storeCombo} NON copre tutti i prodotti`);
+                // console.log(`   ❌ Combinazione ${storeCombo} NON copre tutti i prodotti`);
             }
         }
     }
     
     if (bestSolution) {
-        console.log('🎯 SOLUZIONE OTTIMALE TROVATA:', bestSolution);
+        // console.log('🎯 SOLUZIONE OTTIMALE TROVATA:', bestSolution);
         return bestSolution;
     }
     
     // Fallback: usa i negozi della lista originale
-    console.log('⚠️ Nessuna combinazione ottimale trovata, uso fallback con negozi della lista');
+    // console.log('⚠️ Nessuna combinazione ottimale trovata, uso fallback con negozi della lista');
     const totalPrice = items.reduce((sum, item) => sum + ((item.bestPrice || 0) * (item.quantity || 1)), 0);
     
     // 🔥 Raggruppa per negozio per il fallback
@@ -7302,6 +7659,7 @@ function showScanOptions() {
 
 // Avvia la fotocamera
 async function startCameraScan() {
+    ensureAzureConfig(); // 🔥 AGGIUNGI IN TESTA
     const lang = userProfile?.language || 'it';
     const t = getTranslations(lang);
     closeModal();
@@ -7385,78 +7743,98 @@ function captureReceipt() {
 
 // Upload immagine da file
 function uploadReceiptImage() {
+    // 🔥 Doppia protezione
+    if (!window.AZURE_OCR_ENDPOINT) {
+        window.AZURE_OCR_ENDPOINT = 'https://smartbilling-ocr.cognitiveservices.azure.com/';
+        window.AZURE_OCR_KEY = 'dd2479056629483abaaa790888dbb4f5';
+    }
+    ensureAzureConfig(); // 🔥 AGGIUNGI IN TESTA
+    const lang = userProfile?.language || 'it';
+    const t = getTranslations(lang);
+    
     closeModal();
     
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = function(e) {
+    input.onchange = async function(e) {
         const file = e.target.files[0];
         if (!file) return;
         
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            processReceiptImage(event.target.result);
-        };
-        reader.readAsDataURL(file);
+        showToast(`📤 ${t['uploading'] || 'Caricamento scontrino in corso...'}`);
+        
+        try {
+            // 🔥 Analizza con Azure OCR
+            const azureResult = await analyzeReceiptWithAzure(file);
+            
+            if (!azureResult) {
+                showToast(`❌ ${t['ocr-failed'] || 'Impossibile analizzare lo scontrino'}`);
+                return;
+            }
+            
+            // 🔥 Estrae i prodotti
+            const receiptItems = extractItemsFromReceipt(azureResult);
+            
+            if (receiptItems.length === 0) {
+                showToast(`⚠️ ${t['no-items-found'] || 'Nessun prodotto rilevato nello scontrino'}`);
+                return;
+            }
+            
+            // 🔥 Mostra i prodotti per abbinamento manuale
+            showReceiptItemsForMatching(receiptItems);
+            
+        } catch (error) {
+            console.error('Errore:', error);
+            showToast(`❌ ${t['upload-error'] || 'Errore durante l\'elaborazione'}`);
+        }
     };
     input.click();
 }
 
+// Rendi globale (assicurati che ci sia)
+window.uploadReceiptImage = uploadReceiptImage;
+
 // Processa l'immagine dello scontrino (SIMULATO)
-function processReceiptImage(imageData) {
+async function processReceiptImage(imageData) {
+    // 🔥 Doppia protezione
+    if (!window.AZURE_OCR_ENDPOINT) {
+        window.AZURE_OCR_ENDPOINT = 'https://smartbilling-ocr.cognitiveservices.azure.com/';
+        window.AZURE_OCR_KEY = 'dd2479056629483abaaa790888dbb4f5';
+    }
+    ensureAzureConfig(); // 🔥 AGGIUNGI IN TESTA    
     const lang = userProfile?.language || 'it';
     const t = getTranslations(lang);
     showToast(`🔍 ${t['analyzing'] || 'Analisi scontrino in corso...'}`);
     
-    // 🔥 QUI ANDREBBE L'INTEGRAZIONE CON UN SERVIZIO OCR
-    // Per ora simulo la lettura
-    
-    setTimeout(() => {
-        // Prendi gli articoli spuntati
-        const checkedItems = shoppingList.filter(item => item.checked);
+    try {
+        // 🔥 Converti dataURL in File per Azure
+        const response = await fetch(imageData);
+        const blob = await response.blob();
+        const file = new File([blob], "receipt.jpg", { type: "image/jpeg" });
         
-        if (checkedItems.length === 0) {
-            showToast(`⚠️ ${t['no-items-to-register'] || 'Nessun articolo da registrare'}`);
+        // 🔥 Analizza con Azure
+        const azureResult = await analyzeReceiptWithAzure(file);
+        
+        if (!azureResult) {
+            showToast(`❌ ${t['ocr-failed'] || 'Impossibile analizzare lo scontrino'}`);
             return;
         }
         
-        let updatedCount = 0;
+        // 🔥 Estrae i prodotti
+        const receiptItems = extractItemsFromReceipt(azureResult);
         
-        // Simula la lettura dei prezzi (genera prezzi casuali)
-        checkedItems.forEach(item => {
-            // Prezzo simulato (tra 0.5 e 5 volte il prezzo originale)
-            const simulatedPrice = (item.bestPrice || 2) * (0.8 + Math.random() * 0.7);
-            const roundedPrice = Math.round(simulatedPrice * 100) / 100;
-            
-            // 🔥 SALVA COME SCONTRINO (sostituisce i prezzi precedenti)
-            saveUserPrice(item.name, item.bestStore, roundedPrice, {
-                source: 'receipt',
-                confidence: 1.0
-            });
-            
-            // Aggiorna l'item nel DOM se presente
-            const priceInput = document.getElementById(`price-${item.id}`);
-            if (priceInput) {
-                priceInput.value = roundedPrice;
-                priceInput.style.borderColor = '#10b981';
-                priceInput.style.backgroundColor = '#f0fdf4';
-            }
-            
-            updatedCount++;
-        });
+        if (receiptItems.length === 0) {
+            showToast(`⚠️ ${t['no-items-found'] || 'Nessun prodotto rilevato nello scontrino'}`);
+            return;
+        }
         
-        showToast(`✅ ${updatedCount} ${t['receipt-processed'] || 'prezzi aggiornati da scontrino'}`);
+        // 🔥 Mostra i prodotti per abbinamento manuale
+        showReceiptItemsForMatching(receiptItems);
         
-        // Evidenzia gli articoli aggiornati
-        setTimeout(() => {
-            document.querySelectorAll('[data-item-id] input').forEach(input => {
-                input.style.borderColor = '';
-                input.style.backgroundColor = '';
-            });
-        }, 2000);
-        
-    }, 1500);
+    } catch (error) {
+        console.error('Errore:', error);
+        showToast(`❌ ${t['upload-error'] || 'Errore durante l\'elaborazione'}`);
+    }
 }
 
 // Chiudi modale
@@ -9272,6 +9650,17 @@ function getTranslations(lang) {
             'item-restored': 'Prodotto ripristinato',
             'undo-delete': 'Usa il cestino per recuperare',
             'confirm-clear-trash': 'Svuotare il cestino? Questa azione è irreversibile.',
+            'uploading': 'Caricamento scontrino in corso...',
+            'ocr-failed': 'Impossibile analizzare lo scontrino',
+            'no-items-found': 'Nessun prodotto rilevato nello scontrino',
+            'upload-error': 'Errore durante l\'elaborazione',
+            'match-with': 'Abbina a prodotto in lista:',
+            'new-product': 'Nuovo prodotto',
+            'receipt-matching': 'Abbinamento prodotti scontrino',
+            'confirm-matches': 'Conferma abbinamenti',
+            'items-updated': 'prodotti aggiornati',
+            'new-items-detected': 'nuovi rilevati',
+            'no-items': 'Nessun prodotto rilevato',
             'other': 'Altro',
         },
         'en': {
@@ -9620,6 +10009,17 @@ function getTranslations(lang) {
             'item-restored': 'Item restored',
             'undo-delete': 'Use trash to recover',
             'confirm-clear-trash': 'Empty trash? This action is irreversible.',
+            'uploading': 'Uploading receipt...',
+            'ocr-failed': 'Unable to analyze receipt',
+            'no-items-found': 'No items found in receipt',
+            'upload-error': 'Error during processing',
+            'match-with': 'Match with product in list:',
+            'new-product': 'New product',
+            'receipt-matching': 'Receipt item matching',
+            'confirm-matches': 'Confirm matches',
+            'items-updated': 'items updated',
+            'new-items-detected': 'new detected',
+            'no-items': 'No items detected',
             'other': 'Other',
         },
         'es': {
@@ -9970,6 +10370,17 @@ function getTranslations(lang) {
             'item-restored': 'Producto restaurado',
             'undo-delete': 'Usa la papelera para recuperar',
             'confirm-clear-trash': '¿Vaciar papelera? Esta acción es irreversible.',
+            'uploading': 'Cargando ticket...',
+            'ocr-failed': 'No se puede analizar el ticket',
+            'no-items-found': 'No se encontraron productos en el ticket',
+            'upload-error': 'Error durante el procesamiento',
+            'match-with': 'Emparejar con producto en lista:',
+            'new-product': 'Nuevo producto',
+            'receipt-matching': 'Emparejamiento de productos',
+            'confirm-matches': 'Confirmar emparejamientos',
+            'items-updated': 'productos actualizados',
+            'new-items-detected': 'nuevos detectados',
+            'no-items': 'No se detectaron productos',
             'other': 'Otro',
         },
         'fr': {
@@ -10320,6 +10731,17 @@ function getTranslations(lang) {
             'item-restored': 'Article restauré',
             'undo-delete': 'Utilisez la corbeille pour récupérer',
             'confirm-clear-trash': 'Vider la corbeille ? Cette action est irréversible.',
+            'uploading': 'Téléchargement du ticket...',
+            'ocr-failed': 'Impossible d\'analyser le ticket',
+            'no-items-found': 'Aucun produit trouvé dans le ticket',
+            'upload-error': 'Erreur lors du traitement',
+            'match-with': 'Associer avec le produit dans la liste:',
+            'new-product': 'Nouveau produit',
+            'receipt-matching': 'Association des produits',
+            'confirm-matches': 'Confirmer les associations',
+            'items-updated': 'produits mis à jour',
+            'new-items-detected': 'nouveaux détectés',
+            'no-items': 'Aucun produit détecté',
             'other': 'Autre',
         },
         'de': {
@@ -10670,6 +11092,17 @@ function getTranslations(lang) {
             'item-restored': 'Artikel wiederhergestellt',
             'undo-delete': 'Verwenden Sie den Papierkorb zum Wiederherstellen',
             'confirm-clear-trash': 'Papierkorb leeren? Diese Aktion ist unwiderruflich.',
+            'uploading': 'Beleg wird hochgeladen...',
+            'ocr-failed': 'Beleg kann nicht analysiert werden',
+            'no-items-found': 'Keine Produkte im Beleg gefunden',
+            'upload-error': 'Fehler bei der Verarbeitung',
+            'match-with': 'Mit Produkt in Liste verknüpfen:',
+            'new-product': 'Neues Produkt',
+            'receipt-matching': 'Produktzuordnung',
+            'confirm-matches': 'Zuordnungen bestätigen',
+            'items-updated': 'Produkte aktualisiert',
+            'new-items-detected': 'neue erkannt',
+            'no-items': 'Keine Produkte erkannt',
             'other': 'Sonstiges',
         },
         'ro': {
@@ -11020,6 +11453,17 @@ function getTranslations(lang) {
             'item-restored': 'Produs restaurat',
             'undo-delete': 'Folosește coșul pentru a recupera',
             'confirm-clear-trash': 'Golești coșul? Această acțiune este ireversibilă.',
+            'uploading': 'Încărcare bon în curs...',
+            'ocr-failed': 'Nu se poate analiza bonul',
+            'no-items-found': 'Niciun produs detectat în bon',
+            'upload-error': 'Eroare în timpul procesării',
+            'match-with': 'Asociază cu produsul din listă:',
+            'new-product': 'Produs nou',
+            'receipt-matching': 'Asociere produse bon',
+            'confirm-matches': 'Confirmă asocierile',
+            'items-updated': 'produse actualizate',
+            'new-items-detected': 'noi detectate',
+            'no-items': 'Niciun produs detectat',
             'other': 'Altele',
         }
     };
@@ -11466,6 +11910,9 @@ showScreen = function(screenName) {
 */
     // ==================== INITIALIZE ====================
     function initApp() {
+        // 🔥 PROTEZIONE AZURE - salva e ripristina
+    const savedEndpoint = window.AZURE_OCR_ENDPOINT;
+    const savedKey = window.AZURE_OCR_KEY;
     console.log('🚀 === INIZIALIZZAZIONE APP ===');
     // 🔥 CARICA TUTTI I DATI SALVATI
     loadAllData();
@@ -11654,6 +12101,15 @@ window.productCache = productCache;
 window.priceStats = priceStats;
 window.getTranslations = getTranslations;
 window.userProfile = userProfile;
+// ==================== FORZA GLOBALI AZURE ALLA FINE ====================
+// Queste righe vengono eseguite per ultime, dopo tutto il resto
+window.AZURE_OCR_ENDPOINT = window.AZURE_OCR_ENDPOINT || 'https://smartbilling-ocr.cognitiveservices.azure.com/';
+window.AZURE_OCR_KEY = window.AZURE_OCR_KEY || 'dd2479056629483abaaa790888dbb4f5';
+
+console.log('🔥 Azure forzato alla fine:', {
+    endpoint: window.AZURE_OCR_ENDPOINT,
+    key: window.AZURE_OCR_KEY ? 'presente' : 'mancante'
+});
 
 </script>
 </body>
