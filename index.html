@@ -6,6 +6,44 @@
     <title>Smart Billing App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK - PRIMA degli stili, ma FUORI da style! -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+      import { getAuth } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+      import { getDatabase } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyC-orfB8OMFxxQlU5cXxGeNR3iZynL7Hqs",
+        authDomain: "smart-billing-family.firebaseapp.com",
+        databaseURL: "https://smart-billing-family-default-rtdb.europe-west1.firebasedatabase.app/",  // 🔥 MODIFICA QUESTO!
+        projectId: "smart-billing-family",
+        storageBucket: "smart-billing-family.firebasestorage.app",
+        messagingSenderId: "280562717730",
+        appId: "1:280562717730:web:3f315d6ca93d6305f3667b"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const database = getDatabase(app);
+      
+      window.firebaseApp = app;
+      window.firebaseAuth = auth;
+      window.firebaseDatabase = database;
+      
+      console.log('✅ Firebase inizializzato con CDN');
+    </script>
+    <!-- Firebase Cloud Messaging -->
+    <script type="module">
+    import { getMessaging } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-messaging.js";
+    
+    if (window.firebaseApp) {
+      window.firebaseMessaging = getMessaging(window.firebaseApp);
+      console.log('✅ FCM inizializzato');
+    } else {
+      console.error('❌ firebaseApp non disponibile per FCM');
+    }
+  </script>
     <style>
     
         /* Animazioni */
@@ -1020,10 +1058,60 @@
     <i class="fas fa-trash mr-2"></i> <span data-translate="reset-history">Cancella storico records</span>
 </button>
 </div>
+<!-- 🔥 SEZIONE LOGIN FIREBASE -->
+<div class="mt-6 pt-6 border-t">
+<h3 class="text-lg font-semibold text-gray-800 mb-4">
+    <i class="fas fa-cloud mr-2 text-blue-500"></i>Sincronizzazione Cloud
+</h3>
 
-        </div> <!-- Questa chiude il div class="space-y-8" -->
-    </div> <!-- Questa chiude il div class="bg-white rounded-xl shadow p-6" -->
-</div> <!-- Questa chiude screen-profile -->
+<div class="flex flex-col gap-3">
+    <button onclick="loginWithGoogle()" 
+            class="w-full py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center gap-2">
+        <i class="fab fa-google mr-2"></i> Login con Google
+    </button>
+    
+    <button onclick="logout()" 
+            class="w-full py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 flex items-center justify-center gap-2">
+        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+    </button>
+    
+    <div id="user-info" class="text-sm text-gray-600 text-center mt-2">
+        Non autenticato
+    </div>
+    
+    <button onclick="testNotification()" 
+            class="w-full py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 flex items-center justify-center gap-2">
+        <i class="fas fa-bell mr-2"></i> Abilita notifiche
+    </button>
+</div>
+</div>
+<!-- 🔥 NUOVA SEZIONE CONDIVISIONE LISTA -->
+<div class="mt-6 pt-6 border-t">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-users mr-2 text-green-500"></i>Condivisione lista
+    </h3>
+    <div class="flex flex-col gap-3">
+        <button onclick="shareList()" 
+                class="w-full py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 flex items-center justify-center gap-2">
+            <i class="fas fa-share-alt mr-2"></i> Condividi lista
+        </button>
+        <div class="flex gap-2">
+            <input type="text" id="invite-code-input" 
+                   placeholder="Codice invito" 
+                   class="flex-1 p-3 border rounded-lg">
+            <button onclick="joinListWithCode(document.getElementById('invite-code-input').value)" 
+                    class="px-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600">
+                <i class="fas fa-sign-in-alt"></i>
+            </button>
+        </div>
+        <p class="text-xs text-gray-500 text-center">
+            Inserisci il codice che ti ha dato un familiare per unirti alla sua lista
+        </p>
+    </div>
+</div>
+</div> <!-- Chiude il div class="space-y-8" -->
+</div> <!-- Chiude il div class="bg-white rounded-xl shadow p-6" -->
+</div> <!-- Chiude screen-profile -->
         
         <!-- ==================== SCREEN 8: TUTTE LE TRANSAZIONI ==================== -->
         <div id="screen-transactions" class="screen">
@@ -5682,6 +5770,7 @@ function showScreen(screenName) {
         }, 100);
     }
 }
+window.showScreen = showScreen
 // ==================== SCELTA TIPO TRANSAZIONE ====================
 function askTransactionType() {
     // Crea un modal per scegliere il tipo di transazione
@@ -12039,10 +12128,29 @@ function initApp() {
     
     // 🔥 ESPONI VARIABILI GLOBALI
     exposeGlobals();
+
+    // 🔥 🔥 🔥 AGGIUNGI QUI - AVVIO ASCOLTO POST-INIZIALIZZAZIONE
+    setTimeout(() => {
+        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+            console.log('🎧 Avvio ascolto post-inizializzazione');
+            listenToListChanges();
+        } else {
+            console.log('⚠️ Utente non ancora loggato, riprovo tra 2 secondi...');
+            setTimeout(() => {
+                if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+                    console.log('🎧 Avvio ascolto (secondo tentativo)');
+                    listenToListChanges();
+                }
+            }, 2000);
+        }
+    }, 1000);
     
     console.log('✅ APP INIZIALIZZATA');
     console.log('🌍 LINGUA FINALE:', userProfile.language);
+    // 🔥 AGGIUNGI ALLA FINE
+    setTimeout(updateProfileIconColor, 1000); // Aspetta che l'icona sia caricata
 }
+
 
 // 🔥 SALVA I DATI PRIMA CHE L'APP VENGA CHIUSA (opzionale)
 window.addEventListener('beforeunload', function() {
@@ -12120,6 +12228,681 @@ setTimeout(() => {
         console.log('✅ RIPRISTINATO:', window.shoppingList);
     }
 }, 6000);
+
+// ==================== FIREBASE AUTH FUNCTIONS ====================
+async function loginWithGoogle() {
+    try {
+        console.log('🔐 Avvio login con Google...');
+        
+        // Importa le funzioni necessarie
+        const { GoogleAuthProvider, signInWithPopup } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
+        
+        const provider = new GoogleAuthProvider();
+        
+        // Usa signInWithPopup con l'istanza auth e il provider
+        const result = await signInWithPopup(window.firebaseAuth, provider);
+        
+        // Ottieni informazioni utente
+        const user = result.user;
+        console.log('✅ Login effettuato:', user.email);
+        
+        // Aggiorna UI
+        updateUserInfo(user);
+        
+        showToast(`👋 Benvenuto ${user.displayName || user.email}!`);
+        
+        // Salva user info nel profilo locale
+        if (userProfile) {
+            userProfile.firebaseUid = user.uid;
+            userProfile.firebaseEmail = user.email;
+            saveAllData();
+        }
+        
+    } catch (error) {
+        console.error('❌ Errore login:', error);
+        
+        // Gestione errori specifici
+        if (error.code === 'auth/popup-closed-by-user') {
+            showToast('Login annullato');
+        } else if (error.code === 'auth/unauthorized-domain') {
+            showToast('Dominio non autorizzato. Aggiungi questo dominio su Firebase Console');
+        } else {
+            showToast('Errore durante il login: ' + error.message);
+        }
+    }
+}
+
+async function logout() {
+    try {
+        console.log('🔐 Avvio logout...');
+        
+        const { signOut } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
+        
+        await signOut(window.firebaseAuth);
+        
+        console.log('✅ Logout effettuato');
+        updateUserInfo(null);
+        showToast('Logout effettuato');
+        
+    } catch (error) {
+        console.error('❌ Errore logout:', error);
+        showToast('Errore durante il logout');
+    }
+}
+
+// Aggiorna UI con info utente
+function updateUserInfo(user) {
+    const userInfoDiv = document.getElementById('user-info');
+    if (!userInfoDiv) return;
+    
+    if (user) {
+        userInfoDiv.innerHTML = `
+            <div class="flex items-center justify-center gap-2 text-green-600">
+                <i class="fas fa-check-circle"></i>
+                <span class="font-medium">${user.displayName || user.email}</span>
+            </div>
+        `;
+    } else {
+        userInfoDiv.innerHTML = 'Non autenticato';
+    }
+    updateProfileIconColor(); // 🔥 AGGIUNGI QUI
+}
+
+/*
+// Ascolta cambiamenti di autenticazione
+window.firebaseAuth.onAuthStateChanged(user => {
+    console.log('👤 Stato autenticazione cambiato:', user ? user.email : 'disconnesso');
+    updateUserInfo(user);
+    
+    if (user) {
+        // Utente loggato - qui possiamo caricare i dati dal cloud
+        console.log('🔄 Utente loggato:', user.uid);
+        // Prepara per sincronizzazione cloud
+    } else {
+        // Utente non loggato - usa solo localStorage
+        console.log('💾 Modalità offline (localStorage)');
+    } 
+}); */
+
+// Rendi funzioni globali
+window.loginWithGoogle = loginWithGoogle;
+window.logout = logout;
+
+// ==================== FINE FIREBASE AUTH ====================
+
+// ==================== FIREBASE AUTH FUNCTIONS ====================
+async function loginWithGoogle() {
+    try {
+        console.log('🔐 Avvio login con Google...');
+        
+        // Importa le funzioni necessarie
+        const { GoogleAuthProvider, signInWithPopup } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
+        
+        const provider = new GoogleAuthProvider();
+        
+        // Usa signInWithPopup con l'istanza auth e il provider
+        const result = await signInWithPopup(window.firebaseAuth, provider);
+        
+        // Ottieni informazioni utente
+        const user = result.user;
+        console.log('✅ Login effettuato:', user.email);
+        
+        // Aggiorna UI
+        updateUserInfo(user);
+        
+        showToast(`👋 Benvenuto ${user.displayName || user.email}!`);
+        
+        // Salva user info nel profilo locale
+        if (userProfile) {
+            userProfile.firebaseUid = user.uid;
+            userProfile.firebaseEmail = user.email;
+            saveAllData();
+        }
+        
+    } catch (error) {
+        console.error('❌ Errore login:', error);
+        
+        // Gestione errori specifici
+        if (error.code === 'auth/popup-closed-by-user') {
+            showToast('Login annullato');
+        } else if (error.code === 'auth/unauthorized-domain') {
+            showToast('Dominio non autorizzato. Aggiungi questo dominio su Firebase Console');
+        } else {
+            showToast('Errore durante il login: ' + error.message);
+        }
+    }
+}
+
+async function logout() {
+    try {
+        console.log('🔐 Avvio logout...');
+        
+        const { signOut } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js');
+        
+        await signOut(window.firebaseAuth);
+        
+        console.log('✅ Logout effettuato');
+        updateUserInfo(null);
+        showToast('Logout effettuato');
+        
+    } catch (error) {
+        console.error('❌ Errore logout:', error);
+        showToast('Errore durante il logout');
+    }
+}
+
+// Aggiorna UI con info utente
+function updateUserInfo(user) {
+    const userInfoDiv = document.getElementById('user-info');
+    if (!userInfoDiv) return;
+    
+    if (user) {
+        userInfoDiv.innerHTML = `
+            <div class="flex items-center justify-center gap-2 text-green-600">
+                <i class="fas fa-check-circle"></i>
+                <span class="font-medium">${user.displayName || user.email}</span>
+            </div>
+        `;
+    } else {
+        userInfoDiv.innerHTML = 'Non autenticato';
+    }
+}
+/*
+// Ascolta cambiamenti di autenticazione
+window.firebaseAuth.onAuthStateChanged(user => {
+    console.log('👤 Stato autenticazione cambiato:', user ? user.email : 'disconnesso');
+    updateUserInfo(user);
+    
+    if (user) {
+        // Utente loggato - qui possiamo caricare i dati dal cloud
+        console.log('🔄 Utente loggato:', user.uid);
+        // Prepara per sincronizzazione cloud
+    } else {
+        // Utente non loggato - usa solo localStorage
+        console.log('💾 Modalità offline (localStorage)');
+    } 
+}); */
+
+// Rendi funzioni globali
+window.loginWithGoogle = loginWithGoogle;
+window.logout = logout;
+
+// ==================== FINE FIREBASE AUTH ====================
+
+// ==================== 🔥 FUNZIONI DATABASE FIREBASE (CORRETTE) 🔥 ====================
+
+// Funzioni helper per interagire con Firebase Database (SDK modulare v12)
+async function dbGet(path) {
+    const { get, ref } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+    const dbRef = ref(window.firebaseDatabase, path);
+    return get(dbRef);
+}
+
+async function dbSet(path, value) {
+    const { set, ref } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+    const dbRef = ref(window.firebaseDatabase, path);
+    return set(dbRef, value);
+}
+
+async function dbUpdate(path, value) {
+    const { update, ref } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js');
+    const dbRef = ref(window.firebaseDatabase, path);
+    return update(dbRef, value);
+}
+
+function dbOnValue(path, callback) {
+    import('https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js').then(({ ref, onValue }) => {
+        const dbRef = ref(window.firebaseDatabase, path);
+        onValue(dbRef, callback);
+    });
+}
+
+// Ottieni l'ID utente corrente
+function getCurrentUserId() {
+    const user = window.firebaseAuth.currentUser;
+    return user ? user.uid : null;
+}
+
+// Carica lista dal cloud
+// Carica lista dal cloud (USA UNA LISTA FISSA)
+async function loadShoppingListFromCloud() {
+    const userId = getCurrentUserId();
+    if (!userId) {
+        console.log('❌ Utente non loggato');
+        return null;
+    }
+    
+    try {
+        console.log('☁️ Caricamento lista dal cloud...');
+        
+        // 1. Ottieni la lista attiva dell'utente
+        const activeListSnapshot = await dbGet(`users/${userId}/activeList`);
+        let listId = activeListSnapshot.val();
+        
+        // 2. Se non ha una lista, creane una nuova
+        if (!listId) {
+            listId = await createNewList(userId);
+        }
+        
+        // 3. Carica gli items della lista
+        const itemsSnapshot = await dbGet(`items/${listId}`);
+        const items = itemsSnapshot.val() || {};
+        
+        // 4. Converti in array
+        const shoppingListFromCloud = Object.keys(items).map(key => ({
+            id: parseInt(key) || key,
+            ...items[key]
+        }));
+        
+        console.log(`✅ Caricati ${shoppingListFromCloud.length} articoli dalla lista ${listId}`);
+        return shoppingListFromCloud;
+        
+    } catch (error) {
+        console.error('❌ Errore caricamento dal cloud:', error);
+        return null;
+    }
+}
+async function saveShoppingListToCloud() {
+    const userId = getCurrentUserId();
+    if (!userId) {
+        console.log('❌ Utente non loggato');
+        return false;
+    }
+    
+    try {
+        // 1. Ottieni la lista attiva
+        const activeListSnapshot = await dbGet(`users/${userId}/activeList`);
+        let listId = activeListSnapshot.val();
+        
+        // 2. Se non ha una lista, creane una
+        if (!listId) {
+            listId = await createNewList(userId);
+        }
+        
+        // 3. Prepara i dati
+        const itemsObject = {};
+        shoppingList.forEach(item => {
+            itemsObject[item.id] = {
+                name: item.name,
+                quantity: item.quantity || 1,
+                unit: item.unit || 'pz',
+                checked: item.checked || false,
+                bestPrice: item.bestPrice || 0,
+                bestStore: item.bestStore || '',
+                fromReceipt: item.fromReceipt || false,
+                updatedBy: userId,
+                updatedAt: Date.now()
+            };
+        });
+        
+        // 4. Salva
+        await dbSet(`items/${listId}`, itemsObject);
+        console.log(`✅ Salvati ${shoppingList.length} articoli nella lista ${listId}`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Errore salvataggio:', error);
+        return false;
+    }
+}
+
+// Crea nuova lista per l'utente
+async function createNewList(userId) {
+    try {
+        const listId = `list-${Date.now()}`;
+        
+        // Crea la lista con l'utente come proprietario e primo membro
+        await dbSet(`shoppingLists/${listId}`, {
+            name: 'La mia lista',
+            createdBy: userId,
+            createdAt: Date.now(),
+            members: { [userId]: true }
+        });
+        
+        // Associa la lista all'utente
+        await dbSet(`users/${userId}/activeList`, listId);
+        
+        console.log('✅ Nuova lista creata:', listId);
+        return listId;
+        
+    } catch (error) {
+        console.error('❌ Errore creazione lista:', error);
+        return null;
+    }
+}
+
+// Ascolta cambiamenti in tempo reale
+function listenToListChanges() {
+    const userId = getCurrentUserId();
+    if (!userId) {
+        console.log('⚠️ listenToListChanges: utente non loggato');
+        return;
+    }
+    
+    console.log('🎧 listenToListChanges: avvio ascolto per utente', userId);
+    
+    // Ascolta cambiamenti della lista attiva
+    dbOnValue(`users/${userId}/activeList`, (snapshot) => {
+        const listId = snapshot.val();
+        if (!listId) {
+            console.log('⚠️ listenToListChanges: nessuna lista attiva');
+            return;
+        }
+        
+        console.log('🎧 listenToListChanges: ascolto lista', listId);
+        
+        // Ascolta cambiamenti negli items
+        dbOnValue(`items/${listId}`, (itemsSnapshot) => {
+            const items = itemsSnapshot.val() || {};
+            const newShoppingList = Object.keys(items).map(key => ({
+                id: parseInt(key) || key,
+                ...items[key]
+            }));
+            
+            if (JSON.stringify(newShoppingList) !== JSON.stringify(shoppingList)) {
+                console.log('📦 Aggiornamento lista in tempo reale!');
+                shoppingList = newShoppingList;
+                renderShoppingList();
+                showToast('📲 La lista è stata aggiornata!');
+            }
+        });
+    });
+}
+// ==================== CONDIVISIONE LISTA ====================
+
+// Ottieni l'ID della lista attuale
+async function getCurrentListId() {
+    const userId = getCurrentUserId();
+    if (!userId) return null;
+    const snapshot = await dbGet(`users/${userId}/activeList`);
+    return snapshot.val();
+}
+
+// Genera un codice di invito per la lista
+async function generateInviteCode() {
+    const listId = await getCurrentListId();
+    if (!listId) {
+        showToast('❌ Nessuna lista attiva');
+        return null;
+    }
+    
+    // Crea un codice unico (6 caratteri)
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // Salva il codice nel database
+    await dbSet(`invites/${code}`, {
+        listId: listId,
+        createdBy: getCurrentUserId(),
+        createdAt: Date.now(),
+        used: false
+    });
+    
+    console.log('🔑 Codice invito:', code);
+    return code;
+}
+
+// Unisciti a una lista con un codice
+async function joinListWithCode(code) {
+    const userId = getCurrentUserId();
+    if (!userId) return;
+    
+    // Verifica che il codice esista
+    const inviteSnapshot = await dbGet(`invites/${code.toUpperCase()}`);
+    const invite = inviteSnapshot.val();
+    
+    if (!invite) {
+        showToast('❌ Codice invito non valido');
+        return false;
+    }
+    
+    if (invite.used) {
+        showToast('❌ Questo codice è già stato usato');
+        return false;
+    }
+    
+    const listId = invite.listId;
+    
+    // Aggiungi l'utente ai membri della lista
+    await dbUpdate(`shoppingLists/${listId}/members`, {
+        [userId]: true
+    });
+    
+    // Imposta la lista come attiva per l'utente
+    await dbSet(`users/${userId}/activeList`, listId);
+    
+    // Segna il codice come usato (opzionale)
+    await dbUpdate(`invites/${code.toUpperCase()}`, {
+        used: true,
+        usedBy: userId,
+        usedAt: Date.now()
+    });
+    
+    showToast('✅ Sei stato aggiunto alla lista!');
+    
+    // Ricarica la lista
+    const cloudList = await loadShoppingListFromCloud();
+    if (cloudList) {
+        shoppingList = cloudList;
+        renderShoppingList();
+    }
+    
+    return true;
+}
+
+// Crea un nuovo codice di invito (da mostrare all'altro utente)
+async function shareList() {
+    const code = await generateInviteCode();
+    if (code) {
+        // Mostra il codice in un alert (o in un modal)
+        alert(`Condividi questo codice con la tua famiglia:\n\n${code}\n\nVai su "Unisciti a una lista" e inseriscilo.`);
+        showToast(`📋 Codice: ${code}`);
+    }
+}
+// Rendi globali le funzioni di condivisione
+window.shareList = shareList;
+window.joinListWithCode = joinListWithCode;
+window.getCurrentListId = getCurrentListId;
+
+
+// ==================== 🔥 MODIFICA FUNZIONI ORIGINALI 🔥 ====================
+
+// Salva le funzioni originali
+const originalSaveAllData = saveAllData;
+const originalLoadAllData = loadAllData;
+
+// Modifica saveAllData per supportare Firebase
+saveAllData = function() {
+    // Salva sempre in localStorage (backup locale)
+    originalSaveAllData();
+    
+    // Se utente loggato, salva anche su cloud
+    if (window.firebaseAuth?.currentUser) {
+        saveShoppingListToCloud();
+    }
+};
+
+// Modifica loadAllData per caricare da Firebase
+loadAllData = async function() {
+    // Prima carica da localStorage (backup)
+    originalLoadAllData();
+    
+    // Se utente loggato, carica da cloud
+    if (window.firebaseAuth?.currentUser) {
+        const cloudList = await loadShoppingListFromCloud();
+        if (cloudList && cloudList.length > 0) {
+            shoppingList = cloudList;
+            renderShoppingList();
+        }
+    }
+};
+
+// ==================== 🔥 MODIFICA onAuthStateChanged 🔥 ====================
+
+window.firebaseAuth.onAuthStateChanged(async user => {
+    console.log('👤 Stato autenticazione cambiato:', user ? user.email : 'disconnesso');
+    updateUserInfo(user);
+    updateProfileIconColor();
+    
+    if (user) {
+        console.log('🔄 Utente loggato:', user.uid);
+        
+        // Carica la lista dal cloud
+        const cloudList = await loadShoppingListFromCloud();
+        if (cloudList && cloudList.length > 0) {
+            shoppingList = cloudList;
+            renderShoppingList();
+        }
+        
+        // 🔥 IMPORTANTE: attiva l'ascolto in tempo reale
+        listenToListChanges();
+        initNotifications();
+        
+    } else {
+        console.log('💾 Modalità offline (localStorage)');
+        originalLoadAllData();
+    }
+});
+
+// ==================== FINE FIREBASE DATABASE ====================
+
+// ==================== NOTIFICHE PUSH ====================
+
+// Registra Service Worker manualmente
+async function registerServiceWorker() {
+    try {
+        if ('serviceWorker' in navigator) {
+            // Cerca di registrare il Service Worker
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            console.log('✅ Service Worker registrato con scope:', registration.scope);
+            return registration;
+        } else {
+            console.error('❌ Service Worker non supportato');
+            return null;
+        }
+    } catch (error) {
+        console.error('❌ Errore registrazione Service Worker:', error);
+        return null;
+    }
+}
+
+// Richiedi permesso e ottieni token
+async function requestNotificationPermission() {
+    if (!window.firebaseMessaging) {
+        console.log('❌ FCM non disponibile');
+        showToast('Notifiche non supportate su questo browser');
+        return null;
+    }
+    
+    try {
+        // Prima registra il Service Worker
+        const swRegistration = await registerServiceWorker();
+        if (!swRegistration) {
+            console.log('❌ Impossibile registrare Service Worker');
+            showToast('Impossibile abilitare notifiche');
+            return null;
+        }
+        
+        // Richiedi permesso
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.log('❌ Permesso notifiche negato');
+            showToast('Permesso notifiche negato');
+            return null;
+        }
+        
+        // Ottieni token FCM
+        const { getToken } = await import('https://www.gstatic.com/firebasejs/12.10.0/firebase-messaging.js');
+        const token = await getToken(window.firebaseMessaging, {
+            vapidKey: 'BGLtRA07E0Xq2371swHZcK7xQanx2QqUJlUeoFGtOGB-nMlnX0kXrPZTT_CIJXQ2ARxWaHS7HfJ6d3zcw94su8Y',
+            serviceWorkerRegistration: swRegistration
+        });
+        
+        console.log('✅ Token FCM ottenuto:', token);
+        await saveFCMToken(token);
+        showToast('✅ Notifiche abilitate!');
+        return token;
+        
+    } catch (error) {
+        console.error('❌ Errore richiesta notifiche:', error);
+        showToast('Errore: ' + error.message);
+        return null;
+    }
+}
+
+// Salva token FCM nel database
+async function saveFCMToken(token) {
+    const userId = getCurrentUserId();
+    if (!userId) return;
+    
+    try {
+        await dbSet(`users/${userId}/fcmTokens/${token}`, {
+            token: token,
+            userAgent: navigator.userAgent,
+            lastSeen: Date.now()
+        });
+        console.log('✅ Token FCM salvato nel cloud');
+    } catch (error) {
+        console.error('❌ Errore salvataggio token:', error);
+    }
+}
+
+// Ascolta messaggi in primo piano
+function listenForMessages() {
+    if (!window.firebaseMessaging) return;
+    
+    import('https://www.gstatic.com/firebasejs/12.10.0/firebase-messaging.js')
+        .then(({ onMessage }) => {
+            onMessage(window.firebaseMessaging, (payload) => {
+                console.log('📨 Messaggio ricevuto in primo piano:', payload);
+                
+                if (payload.notification) {
+                    const notification = new Notification(payload.notification.title, {
+                        body: payload.notification.body,
+                        icon: payload.notification.icon
+                    });
+                    
+                    notification.onclick = () => {
+                        window.focus();
+                        showScreen('shopping');
+                    };
+                }
+            });
+        });
+}
+
+// Inizializza notifiche all'avvio
+async function initNotifications() {
+    const user = window.firebaseAuth?.currentUser;
+    if (!user) return;
+    
+    console.log('🔔 Inizializzo notifiche per:', user.email);
+    
+    if (!('Notification' in window)) {
+        console.log('❌ Questo browser non supporta le notifiche');
+        return;
+    }
+    
+    if (Notification.permission === 'granted') {
+        await requestNotificationPermission();
+    }
+    
+    listenForMessages();
+}
+
+// Test notifica
+async function testNotification() {
+    const token = await requestNotificationPermission();
+    if (token) {
+        showToast('✅ Notifiche abilitate! Riceverai notifiche quando qualcuno modifica la lista');
+    } else {
+        showToast('❌ Impossibile abilitare notifiche');
+    }
+}
+
+// Rendi globali
+window.requestNotificationPermission = requestNotificationPermission;
+window.testNotification = testNotification;
+window.initNotifications = initNotifications;
 
 </script>
 </body>
